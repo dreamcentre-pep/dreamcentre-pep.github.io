@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0e0e10">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/fixed/logo.webp">
 <title>PEP Magazine</title>
 </head>
 <body>
@@ -242,7 +243,17 @@ details.region ul{margin:0;padding:0 18px 14px 36px;display:flex;flex-direction:
 .prog{display:flex;flex-direction:column;gap:6px}
 .prog h3{font-family:var(--font-display);font-size:20px;line-height:1.25}
 
-.preview-bar{position:sticky;top:0;z-index:40;background:#b3261e;color:#fff;font-weight:700;font-size:13px;text-align:center;padding:8px 16px}
+.preview-bar{position:sticky;top:0;z-index:40;background:#b3261e;color:#fff;font-weight:700;font-size:13px;text-align:center;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center}
+.preview-bar[hidden]{display:none}
+.pb-btn{background:#fff;color:#b3261e;padding:7px 14px;border-radius:99px;text-decoration:none}
+.pb-link{color:#fff;opacity:.9}
+.print-mode .side,.print-mode .top,.print-mode .tabbar,.print-mode .preview-bar{display:none!important}
+.print-mode .shell{grid-template-columns:1fr!important}
+.print-mode main{padding:0 24px!important}
+.print-page{break-after:page;padding-block:20px}
+.print-mode .card{box-shadow:none}
+.print-mode .tile p{-webkit-line-clamp:unset}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -332,97 +343,105 @@ function todayIndex(){const t=new Date();const k=`${t.getFullYear()}-${String(t.
   const i=I.bibleInYear.findIndex(d=>d.date===k);return i<0?0:i}
 const BOOKS=['Old Testament','New Testament','Psalms','Proverbs'];
 
+const has=x=>x&&(typeof x!=='object'||Object.keys(x).length);
 const V={
 today(){
   const mName=MONTHS[D(I.date).getMonth()];
   const ti=todayIndex(),td=I.bibleInYear[ti];
+  const f=I.fathersHeart,st=I.study,w=M&&M.word,g=I.greaterWorks,t=I.testimony,h=I.hymn;
   return `<div class="view wide">
   <section class="hero" aria-label="This Sunday">
-    <img class="bg img-cover" src="${src(I.service.background)}" alt="">
+    <img class="bg img-cover" id="coverImg" src="${src(I.service.background)}" alt="">
     <img class="pastors" src="${src(S.pastorsImage)}" alt="${esc(S.pastors)}">
     <div class="hero-txt"><span class="hero-date">${longDate(I.date)}</span>
       <h1 class="hero-title">${esc(I.service.title)}</h1><span class="hero-who">${esc(S.pastors)}</span></div>
   </section>
-  ${M.honour?`<section class="card pad month-strip"><div><span class="eyebrow">${mName}</span><div class="t">${esc(M.honour.title)}. ${esc(M.honour.series)}</div></div>
-    <div class="sundays">${M.honour.sundays.map(s=>{const d=D(s);return `<div class="sun ${s===I.date?'now':''}">${MON[d.getMonth()]}<b>${d.getDate()}</b></div>`}).join('')}</div></section>`:''}
+  ${M&&M.honour&&M.honour.title?`<section class="card pad month-strip"><div><span class="eyebrow">${mName}</span><div class="t">${esc(M.honour.title)}${M.honour.series?'. '+esc(M.honour.series):''}</div></div>
+    <div class="sundays" style="grid-template-columns:repeat(${M.honour.sundays.length},1fr)">${M.honour.sundays.map(s=>{const d=D(s);return `<div class="sun ${s===I.date?'now':''}">${MON[d.getMonth()]}<b>${d.getDate()}</b></div>`}).join('')}</div></section>`:''}
   <div class="grid">
-    <a class="card tile span" href="#heart"><span class="eyebrow">From the Father's Heart</span><h3>${esc(I.fathersHeart.title)}</h3><p>${esc(I.fathersHeart.paragraphs[0])}</p><span class="more">Read the message</span></a>
-    <a class="card tile img" href="#study"><img class="img-cover" src="${src(I.study.image)}" alt=""><span class="eyebrow">PEP Studies ${I.study.number}</span><h3>${esc(I.study.title)}</h3><span class="more">Start the study</span></a>
-    <a class="card tile img" href="#month"><img class="img-cover" src="${src(M.word.image)}" alt=""><span class="eyebrow">God's Word for ${mName}</span><h3>${esc(M.word.title)}</h3><span class="more">Read the word</span></a>
-    <a class="card tile" href="#daily"><span class="eyebrow">Bible in a Year · ${shortDate(td.date)}</span><h3>Today's reading</h3><p>${td.readings.map(esc).join(' · ')}</p><span class="more">Open daily devotion</span></a>
-    <a class="card tile img" href="#worship"><img class="img-cover" src="${src(I.greaterWorks.image)}" alt=""><span class="eyebrow">Greater Works Scripture</span><h3>${esc(I.greaterWorks.reference)}</h3><p>${esc(I.greaterWorks.text)}</p></a>
-    <a class="card tile" href="#testimony"><span class="eyebrow">Testimony</span><h3>${esc(I.testimony.opening)}</h3><p>${esc(I.testimony.paragraphs.slice(2).join(' '))}</p><span class="more">Read the testimony</span></a>
-    <a class="card tile" href="#worship"><span class="eyebrow">Hymn of the week</span><h3>${esc(I.hymn.title)}</h3><p>${esc(I.hymn.reference)}</p></a>
+    ${f?`<a class="card tile span" href="#heart"><span class="eyebrow">From the Father's Heart</span><h3>${esc(f.title)}</h3><p>${esc(f.paragraphs[0]||'')}</p><span class="more">Read the message</span></a>`:''}
+    ${st?`<a class="card tile img" href="#study"><img class="img-cover" src="${src(st.image)}" alt=""><span class="eyebrow">PEP Studies ${esc(st.number)}</span><h3>${esc(st.title)}</h3><span class="more">Start the study</span></a>`:''}
+    ${w&&w.title?`<a class="card tile img" href="#month"><img class="img-cover" src="${src(w.image)}" alt=""><span class="eyebrow">God's Word for ${mName}</span><h3>${esc(w.title)}</h3><span class="more">Read the word</span></a>`:''}
+    ${td?`<a class="card tile" href="#daily"><span class="eyebrow">Bible in a Year · ${shortDate(td.date)}</span><h3>Today's reading</h3><p>${td.readings.map(esc).join(' · ')}</p><span class="more">Open daily devotion</span></a>`:''}
+    ${g?`<a class="card tile img" href="#worship"><img class="img-cover" src="${src(g.image)}" alt=""><span class="eyebrow">Greater Works Scripture</span><h3>${esc(g.reference)}</h3><p>${esc(g.text)}</p></a>`:''}
+    ${t?`<a class="card tile" href="#testimony"><span class="eyebrow">Testimony</span><h3>${esc(t.opening||'Testimony')}</h3><p>${esc(t.paragraphs.join(' '))}</p><span class="more">Read the testimony</span></a>`:''}
+    ${h&&h.title?`<a class="card tile" href="#worship"><span class="eyebrow">Hymn of the week</span><h3>${esc(h.title)}</h3><p>${esc(h.reference)}</p></a>`:''}
   </div></div>`},
 
-heart(){const f=I.fathersHeart;return `<div class="view">
+heart(){const f=I.fathersHeart;if(!f)return empty("From the Father's Heart");const mw=I.messageForWeek,bw=I.bookForWeek;return `<div class="view">
   ${head("From the Father's Heart",f.title,longDate(I.date))}
   <article class="card pad"><div class="read"><p><em>${esc(f.salutation)}</em></p>
     ${f.paragraphs.slice(0,2).map(p=>`<p>${esc(p)}</p>`).join('')}
     </div></article>
-  <figure class="card pull" style="margin:0"><img src="${src(S.quotePortrait)}" alt="Rev. Olusola Areogun"><q>${esc(f.quote)}</q></figure>
-  <article class="card pad"><div class="read">${f.paragraphs.slice(2).map(p=>`<p>${esc(p)}</p>`).join('')}
-    <p>${esc(f.closing)}</p><p class="sig">${esc(f.signature)}</p></div></article>
-  <div class="side-by">
-    <div class="card feature"><img src="${src(I.messageForWeek.image)}" alt=""><div><span class="eyebrow">Message for the Week</span><h3>${esc(I.messageForWeek.title)}</h3></div></div>
-    <div class="card feature"><img src="${src(I.bookForWeek.image)}" alt=""><div><span class="eyebrow">Book for the Week</span><h3>${esc(I.bookForWeek.title)}</h3><p>${esc(I.bookForWeek.authors)}</p></div></div>
-  </div>
+  ${f.quote?`<figure class="card pull" style="margin:0"><img src="${src(S.quotePortrait)}" alt="Rev. Olusola Areogun"><q>${esc(f.quote)}</q></figure>`:''}
+  ${f.paragraphs.length>2?`<article class="card pad"><div class="read">${f.paragraphs.slice(2).map(p=>`<p>${esc(p)}</p>`).join('')}
+    <p>${esc(f.closing)}</p><p class="sig">${esc(f.signature)}</p></div></article>`:`<p class="sig">${esc(f.signature)}</p>`}
+  ${mw||bw?`<div class="side-by">
+    ${mw?`<div class="card feature">${mw.image?`<img src="${src(mw.image)}" alt="">`:''}<div><span class="eyebrow">Message for the Week</span><h3>${esc(mw.title)}</h3></div></div>`:''}
+    ${bw?`<div class="card feature"><img src="${src(bw.image)}" alt=""><div><span class="eyebrow">Book for the Week</span><h3>${esc(bw.title)}</h3><p>${esc(bw.authors)}</p></div></div>`:''}
+  </div>`:''}
   ${orderCard()}</div>`},
 
-month(){const w=M.word;const mName=MONTHS[D(I.date).getMonth()];return `<div class="view wide">
+month(){const w=M&&M.word;if(!w||!w.title)return empty("God's Word for the Month");const mName=MONTHS[D(I.date).getMonth()];return `<div class="view wide">
   <section class="banner"><img class="img-cover" src="${src(w.image)}" alt=""><div class="in"><span class="eyebrow">God's Word for ${mName} ${D(I.date).getFullYear()}</span><h1 class="page-title">${esc(w.title)}</h1><span>${esc(w.subtitle)}</span></div></section>
-  <div class="month-wrap"><div class="month-portrait"><img src="${src(w.portrait)}" alt="Rev. Olusola Areogun"></div>
+  <div class="month-wrap"><div class="month-portrait"><img src="${src(w.portrait||S.monthPortrait)}" alt="Rev. Olusola Areogun"></div>
   <article class="card pad"><div class="read">${blocks(w.blocks)}<p class="sig">${esc(w.signature)}</p></div></article></div></div>`},
 
-study(){const s=I.study;return `<div class="view">
+study(){const s=I.study;if(!s)return empty('PEP Studies');return `<div class="view">
   <section class="banner"><img class="img-cover" src="${src(s.image)}" alt=""><div class="in">
-    <div class="row"><span class="study-no">${s.number}</span><span class="eyebrow">Prophetic. Effective. Productive Studies</span></div>
+    <div class="row">${s.number?`<span class="study-no">${esc(s.number)}</span>`:''}<span class="eyebrow">Prophetic. Effective. Productive Studies</span></div>
     <h1 class="page-title">${esc(s.title)}</h1></div></section>
   <article class="card pad"><div class="read">${blocks(s.blocks)}</div></article></div>`},
 
-daily(){const ti=todayIndex();return `<div class="view">
-  ${head('Daily Devotion','Bible in a Year','Tap a day to see its readings.')}
+daily(all){const ti=todayIndex(),v=I.vocabulary,pw=I.propheticWords||[];return `<div class="view">
+  ${I.bibleInYear.length?`${head('Daily Devotion','Bible in a Year',all?'':'Tap a day to see its readings.')}
   <section class="card pad" style="display:flex;flex-direction:column;gap:14px">
-    <div class="days" role="group" aria-label="Choose a day">${I.bibleInYear.map((d,i)=>{const x=D(d.date);return `<button class="day" data-day="${i}" aria-pressed="${i===ti}"><small>${MON[x.getMonth()]}</small><b>${x.getDate()}</b></button>`}).join('')}</div>
-    <div id="readingOut"></div></section>
-  ${head('Confess it','Anointed Vocabulary')}
+    ${all?I.bibleInYear.map(d=>`<div><b>${D(d.date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</b><div class="readings" style="margin-top:6px">${d.readings.map((r,k)=>`<div class="reading"><small>${BOOKS[k]||''}</small>${esc(r)}</div>`).join('')}</div></div>`).join(''):
+    `<div class="days" role="group" aria-label="Choose a day">${I.bibleInYear.map((d,i)=>{const x=D(d.date);return `<button class="day" data-day="${i}" aria-pressed="${i===ti}"><small>${MON[x.getMonth()]}</small><b>${x.getDate()}</b></button>`}).join('')}</div>
+    <div id="readingOut"></div>`}</section>`:''}
+  ${v&&v.items&&v.items.length?`${head('Confess it','Anointed Vocabulary')}
   <section class="card pad" style="display:flex;flex-direction:column;gap:12px">
-    <blockquote class="scripture" style="margin:0;font-family:var(--font-read)">${esc(I.vocabulary.verse)}<cite>${esc(I.vocabulary.reference)}</cite></blockquote>
-    <ul class="vocab">${I.vocabulary.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section>
-  ${head('Declare it','Prophetic Words for 2026')}
-  <div class="words">${I.propheticWords.map(w=>`<div class="word">${esc(w)}</div>`).join('')}</div></div>`},
+    ${v.verse?`<blockquote class="scripture" style="margin:0;font-family:var(--font-read)">${esc(v.verse)}<cite>${esc(v.reference)}</cite></blockquote>`:''}
+    <ul class="vocab">${v.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section>`:''}
+  ${pw.length?`${head('Declare it','Prophetic Words for '+D(I.date).getFullYear())}
+  <div class="words">${pw.map(w=>`<div class="word">${esc(w)}</div>`).join('')}</div>`:''}</div>`},
 
-worship(){const g=I.greaterWorks,c=I.covenant;return `<div class="view">
+worship(){const g=I.greaterWorks,c=I.covenant,h=I.hymn;return `<div class="view">
   ${head('This week','Hymn & Scripture')}
-  <section class="card hymn"><img src="${src(S.hymnImage)}" alt=""><div class="in"><span class="eyebrow">Hymn</span><div class="t">${esc(I.hymn.title)}</div><p class="page-sub">${esc(I.hymn.reference)}</p></div></section>
-  <section class="gw"><img class="img-cover" src="${src(g.image)}" alt=""><div class="in"><span class="eyebrow" style="color:#fff">Greater Works Scripture</span><span class="ref">${esc(g.reference)}</span><blockquote>"${esc(g.text)}"</blockquote></div></section>
-  <section class="cov"><img class="img-cover" src="${src(c.image)}" alt=""><span class="eyebrow" style="color:#fff">Covenant in the House</span><span class="big">${esc(c.title)}</span><span class="line">"${esc(c.line)}"</span></section></div>`},
+  ${h&&h.title?`<section class="card hymn"><img src="${src(S.hymnImage)}" alt=""><div class="in"><span class="eyebrow">Hymn</span><div class="t">${esc(h.title)}</div><p class="page-sub">${esc(h.reference)}</p></div></section>`:''}
+  ${g?`<section class="gw"><img class="img-cover" src="${src(g.image)}" alt=""><div class="in"><span class="eyebrow" style="color:#fff">Greater Works Scripture</span><span class="ref">${esc(g.reference)}</span><blockquote>"${esc(g.text)}"</blockquote></div></section>`:''}
+  ${c?`<section class="cov"><img class="img-cover" src="${src(c.image)}" alt=""><span class="eyebrow" style="color:#fff">Covenant in the House</span><span class="big">${esc(c.title)}</span>${c.line?`<span class="line">"${esc(c.line)}"</span>`:''}</section>`:''}</div>`},
 
-testimony(){const t=I.testimony;return `<div class="view">
-  ${head('Testimony',t.opening,`${t.author} · ${t.zone}`)}
+testimony(){const t=I.testimony;if(!t)return empty('Testimony');return `<div class="view">
+  ${head('Testimony',t.opening||'Testimony',[t.author,t.zone].filter(Boolean).join(' · '))}
   <article class="card pad"><div class="read">${t.paragraphs.map(p=>`<p>${esc(p)}</p>`).join('')}<p class="sig">${esc(t.author)}\n${esc(t.zone)}</p></div></article></div>`},
 
-more(){return `<div class="view">
+more(){const w=M&&M.word,rel=S.newReleases||I.newReleases||[],arch=(S.archive||[]).filter(d=>d!==I.date);return `<div class="view">
   ${head('Churches & More','Notices')}
   <div class="grid">
-    <a class="card tile img" href="#month"><img class="img-cover" src="${src(M.word.image)}" alt=""><span class="eyebrow">God's Word for ${MONTHS[D(I.date).getMonth()]}</span><h3>${esc(M.word.title)}</h3><span class="more">Read the word</span></a>
-    <a class="card tile img" href="#worship"><img class="img-cover" src="${src(I.greaterWorks.image)}" alt=""><span class="eyebrow">Hymn & Scripture</span><h3>${esc(I.hymn.title)}</h3><p>${esc(I.greaterWorks.reference)} · ${esc(I.covenant.title)}</p></a>
-    <a class="card tile span" href="#testimony"><span class="eyebrow">Testimony</span><h3>${esc(I.testimony.opening)}</h3><p>${esc(I.testimony.paragraphs.slice(2).join(' '))}</p><span class="more">Read the testimony</span></a>
+    ${w&&w.title?`<a class="card tile img" href="#month"><img class="img-cover" src="${src(w.image)}" alt=""><span class="eyebrow">God's Word for ${MONTHS[D(I.date).getMonth()]}</span><h3>${esc(w.title)}</h3><span class="more">Read the word</span></a>`:''}
+    ${I.greaterWorks?`<a class="card tile img" href="#worship"><img class="img-cover" src="${src(I.greaterWorks.image)}" alt=""><span class="eyebrow">Hymn & Scripture</span><h3>${esc(I.hymn&&I.hymn.title||I.greaterWorks.reference)}</h3><p>${esc(I.greaterWorks.reference)}${I.covenant?' · '+esc(I.covenant.title):''}</p></a>`:''}
+    ${I.testimony?`<a class="card tile span" href="#testimony"><span class="eyebrow">Testimony</span><h3>${esc(I.testimony.opening||'Testimony')}</h3><p>${esc(I.testimony.paragraphs.join(' '))}</p><span class="more">Read the testimony</span></a>`:''}
   </div>
-  ${I.programmes.map(p=>`<section class="card pad prog"><span class="eyebrow">Upcoming programme</span><h3>${esc(p.title)}</h3><p class="page-sub">${esc(p.dates)}</p></section>`).join('')}
-  <section class="card pad" style="display:flex;flex-direction:column;gap:14px"><span class="eyebrow">New releases</span>
-    <div class="books">${I.newReleases.map(b=>`<figure><img src="${src(b.image)}" alt=""><figcaption>${esc(b.title)}</figcaption></figure>`).join('')}</div></section>
+  ${(I.programmes||[]).map(p=>`<section class="card pad prog"><span class="eyebrow">Upcoming programme</span><h3>${esc(p.title)}</h3><p class="page-sub">${esc(p.dates)}</p></section>`).join('')}
+  ${rel.length?`<section class="card pad" style="display:flex;flex-direction:column;gap:14px"><span class="eyebrow">New releases</span>
+    <div class="books">${rel.map(b=>`<figure><img src="${src(b.image)}" alt=""><figcaption>${esc(b.title)}</figcaption></figure>`).join('')}</div></section>`:''}
   ${orderCard()}
+  ${I.printPdf?`<section class="card pad order"><div class="copy"><span class="eyebrow">Print edition</span><p>An A4 version of this issue for printing.</p></div><a class="btn" style="margin-left:auto" href="${esc(I.printPdf)}" target="_blank" rel="noopener">Download for print</a></section>`:''}
+  ${S.media&&S.media.length?`<section class="card" aria-label="Mass media outreach"><div class="pad" style="padding-bottom:8px"><span class="eyebrow">Living By The Answer</span><h2 class="page-title" style="font-size:24px;margin-top:6px">On radio & TV</h2></div>
+    ${S.media.map(m=>`<details class="region"><summary>${esc(m.station)}<span class="meta">${esc(m.frequency)}</span></summary><ul style="list-style:none;padding-left:18px"><li>${esc(m.programme)}</li><li><b>${esc(m.times)}</b></li>${m.link?`<li><a href="https://${esc(m.link)}" target="_blank" rel="noopener">${esc(m.link)}</a></li>`:''}</ul></details>`).join('')}</section>`:''}
   <section class="card" aria-label="Worship with us"><div class="pad" style="padding-bottom:8px"><span class="eyebrow">Worship with us</span><h2 class="page-title" style="font-size:24px;margin-top:6px">The Dream Centre near you</h2></div>
     ${S.locations.map(r=>`<details class="region"><summary>${esc(r.region)}<span class="meta">${r.places.length}</span></summary><ul>${r.places.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></details>`).join('')}</section>
-  <section class="card" aria-label="Past issues"><div class="pad" style="padding-bottom:8px"><span class="eyebrow">Archive</span><h2 class="page-title" style="font-size:24px;margin-top:6px">Past issues</h2></div>
-    <div class="list">${S.archive.map(d=>`<div class="li">${ic('archive','lead')}${longDate(d)}<span class="meta">${d===I.date?'This week':'Opens at launch'}</span></div>`).join('')}</div></section>
+  ${arch.length?`<section class="card" aria-label="Past issues"><div class="pad" style="padding-bottom:8px"><span class="eyebrow">Archive</span><h2 class="page-title" style="font-size:24px;margin-top:6px">Past issues</h2></div>
+    <div class="list">${arch.map(d=>`<a href="?issue=${d}">${ic('archive','lead')}${longDate(d)}${ic('chev','chev')}</a>`).join('')}</div></section>`:''}
+  ${(I.credits||[]).length?`<p class="page-sub" style="font-size:12.5px">${I.credits.map(esc).join(' · ')}</p>`:''}
   </div>`}
 };
+function empty(t){return `<div class="view">${head('This week',t)}<p class="page-sub">This section is not in this week's issue.</p></div>`}
 
 function orderCard(){const o=S.orders;return `<section class="card pad order"><img src="${src(o.qr)}" alt="QR code to order books"><div class="copy"><span class="eyebrow">Order books & messages</span><p>Scan the code, visit <a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${esc(o.site)}</b></a> or call <b>${esc(o.phone)}</b>.</p></div></section>`}
 
-function renderReading(i){const d=I.bibleInYear[i];const out=document.getElementById('readingOut');if(!out)return;
+function renderReading(i){const d=I.bibleInYear[i];const out=document.getElementById('readingOut');if(!out||!d)return;
   const t=new Date();const isToday=D(d.date).toDateString()===t.toDateString();
   out.innerHTML=`<div class="row" style="margin-bottom:10px"><b>${D(d.date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</b>${isToday?'<span class="today-tag">Today</span>':''}</div>
   <div class="readings">${d.readings.map((r,k)=>`<div class="reading"><small>${BOOKS[k]||''}</small>${esc(r)}</div>`).join('')}</div>`;
@@ -435,25 +454,60 @@ function route(){
     const on=a.dataset.nav===id||(a.dataset.nav==='more'&&['month','worship','testimony'].includes(id)&&a.classList.contains('tab'));
     a.toggleAttribute('aria-current',false);if(on)a.setAttribute('aria-current','page')});
   if(id==='daily'){renderReading(todayIndex());main.querySelectorAll('.day').forEach(b=>b.addEventListener('click',()=>renderReading(+b.dataset.day)))}
+  if(id==='today'&&!I.accent)accentFromImage(document.getElementById('coverImg'));
   window.scrollTo(0,0);
 }
 
+/* weekly accent picked from the cover image when none is given */
+function accentFromImage(img){
+  if(!img)return;const run=()=>{try{
+    const c=document.createElement('canvas'),w=60,h=Math.max(1,Math.round(60*img.naturalHeight/img.naturalWidth));c.width=w;c.height=h;
+    const x=c.getContext('2d');x.drawImage(img,0,0,w,h);const d=x.getImageData(0,0,w,h).data,bins={};
+    for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);if(mx<90||mx-mn<60)continue;
+      const [hh]=hexToHsl('#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''));const k=Math.round(hh/15);(bins[k]=bins[k]||[]).push([r,g,b])}
+    const best=Object.values(bins).sort((a,b)=>b.length-a.length)[0];if(!best||best.length<20)return;
+    const avg=[0,1,2].map(j=>Math.round(best.reduce((s,p)=>s+p[j],0)/best.length));
+    let [hh,ss,ll]=hexToHsl('#'+avg.map(v=>v.toString(16).padStart(2,'0')).join(''));ll=Math.min(Math.max(ll,45),62);ss=Math.max(ss,55);
+    I.accent=hslHex(hh,ss,ll);applyAccent(I.accent);
+  }catch(e){}};
+  if(img.complete&&img.naturalWidth)run();else img.addEventListener('load',run,{once:true});
+}
+function hslHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return '#'+[f(0),f(8),f(4)].map(v=>Math.round(v*255).toString(16).padStart(2,'0')).join('')}
+
+function renderPrint(){
+  document.body.classList.add('print-mode');
+  const main=document.getElementById('main');
+  main.innerHTML=['today','heart','month','study','worship','testimony'].map(v=>`<div class="print-page">${V[v]()}</div>`).join('')+`<div class="print-page">${V.daily(true)}</div>`;
+  if(!I.accent)accentFromImage(document.getElementById('coverImg'));
+}
+
 function boot(data){
-  S=data.site;I=data.issue;M=data.month;
+  S=data.site;I=data.issue;M=data.month||null;
+  I.bibleInYear=I.bibleInYear||[];
   applyAccent(I.accent||'#fec91b');
   document.documentElement.style.setProperty('--logo',`url("${src(S.logo)}")`);
-  document.getElementById('previewBar').hidden=I.status==='approved';
+  const pb=document.getElementById('previewBar');
+  if(I.preview){pb.hidden=false;pb.innerHTML=I.preview.status==='Draft'?
+      `Preview. Not public yet. <a class="pb-btn" target="_top" href="${esc(I.preview.approve)}">Approve this issue</a>${I.preview.swap.map(s=>` <a class="pb-link" target="_top" href="${esc(s.url)}">New ${s.slot} image</a>`).join('')}`:
+      `Preview. This issue is approved (${esc(I.preview.status)}).`}
+  else pb.hidden=I.status==='approved';
   const binds={dateShort:shortDate(I.date)+' '+D(I.date).getFullYear(),churchLine:`${S.church} ${S.churchFull}`,motto:S.motto};
   document.querySelectorAll('[data-bind]').forEach(el=>{const k=el.dataset.bind;
     if(k==='website'){el.textContent=S.website.label;el.href=S.website.url}else el.textContent=binds[k]});
+  if(new URLSearchParams(location.search).get('print')){renderPrint();return}
   document.getElementById('sideNav').innerHTML=`<div class="nav-group"><span class="nav-label">This issue</span>${NAV.map(n=>`<a class="nav-link" data-nav="${n.id}" href="#${n.id}">${ic(n.id)}${esc(n.label)}</a>`).join('')}</div>`;
   document.getElementById('tabbar').innerHTML=NAV.filter(n=>n.tab).map(n=>`<a class="tab" data-nav="${n.id}" href="#${n.id}"><span class="ico">${ic(n.id)}</span>${n.tab}</a>`).join('');
   window.addEventListener('hashchange',route);route();
 }
 
 if(window.PEP_DATA)boot(window.PEP_DATA);
-else fetch('data/current.json',{cache:'no-store'}).then(r=>r.json()).then(boot)
+else{
+  const q=new URLSearchParams(location.search).get('issue');
+  const url=q&&/^\d{4}-\d{2}-\d{2}$/.test(q)?`data/issues/${q}.json`:'data/current.json';
+  fetch(url,{cache:'no-store'}).then(r=>r.json()).then(boot)
   .catch(()=>{document.getElementById('main').innerHTML='<div class="view"><p>This week\'s magazine could not load. Check your connection and refresh.</p></div>'});
+}
 })();
 </script>
 
