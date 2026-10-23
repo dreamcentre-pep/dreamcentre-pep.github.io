@@ -48,6 +48,8 @@ function prettyDate_(iso) {
   return Utilities.formatDate(d, 'UTC', 'EEEE d MMMM yyyy');
 }
 var CUR_DATE = '';
+var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxinW2ACx33cQckVPJyciTVMGApdRZ8y5Ixs9mXLW-rKa6G3jC3nvje3LlVreQy3p_xXg/exec';
+var DEFAULT_IMG = { cover: 'assets/2026-10-18/hero-bg.webp', study: 'assets/2026-10-18/study-bg.webp', covenant: 'assets/2026-10-18/covenant-bg.webp', greater: 'assets/2026-10-18/greater-bg.webp', month: 'assets/2026-10/month-bg.webp' };
 var props_ = PropertiesService.getScriptProperties();
 function getJ_(k, d) { var v = props_.getProperty(k); return v ? JSON.parse(v) : d; }
 function setJ_(k, v) { props_.setProperty(k, JSON.stringify(v)); }
@@ -289,6 +291,8 @@ function buildIssue_(folder, file, c) {
   var used = getJ_('used', {}), exclude = getJ_('swap:' + folder.getId(), []);
   var pick = function (slot, keywords, sec, allowStock) {
     var r = pickImage_(slot, keywords, folder, sec, c, used, exclude, allowStock);
+    if (!r && allowStock) r = getJ_('last:' + slot, null) || (DEFAULT_IMG[slot] ? { url: c.website + '/' + DEFAULT_IMG[slot], key: 'w:' + slot } : null);
+    else if (r && allowStock) setJ_('last:' + slot, r);
     if (r && r.credit) issue.credits.push(r.credit);
     if (r) used[r.key] = date;
     return r;
@@ -318,7 +322,7 @@ function buildMonth_(date, c, used) {
   for (var d = 1; d <= 31; d++) { var dt = new Date(Date.UTC(y, m - 1, d, 12)); if (dt.getUTCMonth() !== m - 1) break; if (dt.getUTCDay() === 0) sundays.push(iso_(y, m, d)); }
   var blocks = w.blocks.slice(); if (blocks[0] && blocks[0].p) blocks[0] = { lead: blocks[0].p };
   var cached = getJ_('monthimg:' + ym, null), fixed = pickImage_('month', '', folder, w, c, used, [], false);
-  var img = fixed || cached || pickImage_('month', f_(mh, 'image keywords') || f_(w, 'title'), folder, w, c, {}, [], true);
+  var img = fixed || cached || pickImage_('month', f_(mh, 'image keywords') || f_(w, 'title'), folder, w, c, {}, [], true) || { url: c.website + '/' + DEFAULT_IMG.month, key: 'w:month' };
   if (!fixed && img) setJ_('monthimg:' + ym, img);
   return {
     month: ym,
@@ -415,7 +419,7 @@ function doGet(e) {
       var cur = { cover: issue.service.background, study: issue.study && issue.study.image, covenant: issue.covenant && issue.covenant.image, greater: issue.greaterWorks && issue.greaterWorks.image }[slot];
       var ex = getJ_('swap:' + folder.getId(), []); if (cur && cur.key) ex.push(cur.key); setJ_('swap:' + folder.getId(), ex.slice(-60));
       props_.deleteProperty('fp:' + folder.getId()); tick();
-      return HtmlService.createHtmlOutput('<meta http-equiv="refresh" content="0;url=' + ScriptApp.getService().getUrl() + '?p=preview&d=' + p.d + '&t=' + p.t + '"><p style="font-family:sans-serif">Picking another image...</p>');
+      return page_('New image picked', 'A different ' + slot + ' image has been chosen. <a target="_top" href="' + WEBAPP_URL + '?p=preview&d=' + p.d + '&t=' + p.t + '">Open the preview again</a>');
     }
     return preview_(c, p.d, st, folder);
   } catch (err) { return page_('Something went wrong', String(err)); }
@@ -441,7 +445,7 @@ function bundleFor_(c, issue, inline) {
 }
 function preview_(c, date, st, folder) {
   var issue = readJson_(folder, '_issue.json');
-  var b = bundleFor_(c, issue, true), base = ScriptApp.getService().getUrl() + '?d=' + date + '&t=' + st.token;
+  var b = bundleFor_(c, issue, true), base = WEBAPP_URL + '?d=' + date + '&t=' + st.token;
   var site = JSON.parse(UrlFetchApp.fetch(c.website + '/data/site.json').getContentText());
   Object.keys(site).forEach(function (k) { if (typeof site[k] === 'string' && site[k].indexOf('assets/') === 0) b.assets[site[k]] = c.website + '/' + site[k]; });
   b.assets['assets/fixed/rev-month.webp'] = c.website + '/assets/fixed/rev-month.webp';
@@ -451,10 +455,21 @@ function preview_(c, date, st, folder) {
     swap: ['cover', 'study', 'covenant', 'greater'].filter(function (s) { var r = { cover: issue.service.background, study: issue.study && issue.study.image, covenant: issue.covenant && issue.covenant.image, greater: issue.greaterWorks && issue.greaterWorks.image }[s]; return r && !r.drive; })
       .map(function (s) { return { slot: s, url: base + '&p=swap&s=' + s }; })
   };
-  var html = UrlFetchApp.fetch(c.website + '/index.html?v=' + Date.now()).getContentText();
-  var inject = '<script>window.PEP_DATA=' + JSON.stringify({ site: site, issue: b.issue, month: b.month }).replace(/</g, '\\u003c') +
-    ';window.PEP_ASSETS=' + JSON.stringify(b.assets) + ';</script>\n';
-  html = html.replace('<script>\n(function(){', inject + '<script>\n(function(){');
+  var data = { pepPreview: true, site: site, issue: b.issue, month: b.month, assets: b.assets };
+  var pv = b.issue.preview; b.issue.preview = null; b.issue.status = 'approved';
+  var bar = pv.status === 'Draft'
+    ? 'Preview only. Not public yet. <a class="ok" target="_top" href="' + pv.approve + '">Approve this issue</a>' +
+      pv.swap.map(function (s) { return ' <a target="_top" href="' + s.url + '">New ' + s.slot + ' image</a>'; }).join('')
+    : 'This issue is approved (' + pv.status + ').';
+  var html = '<style>html,body{margin:0;height:100%;font-family:Arial,sans-serif}' +
+    '.bar{background:#b3261e;color:#fff;font-weight:bold;font-size:14px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:center}' +
+    '.bar a{color:#fff}.bar a.ok{background:#fff;color:#b3261e;padding:7px 14px;border-radius:99px;text-decoration:none}' +
+    'iframe{border:0;width:100%;height:calc(100% - 44px);display:block}</style>' +
+    '<div class="bar">' + bar + '</div>' +
+    '<iframe id="f" src="' + c.website + '/?preview=1&v=' + Date.now() + '"></iframe>' +
+    '<script>var D=' + JSON.stringify(data).replace(/</g, '\\u003c') + ';var f=document.getElementById("f");' +
+    'function send(){f.contentWindow.postMessage(D,"*")}f.addEventListener("load",function(){send();setTimeout(send,800)});' +
+    'window.addEventListener("message",function(e){if(e.data==="pep-ready")send()});</script>';
   return HtmlService.createHtmlOutput(html).setTitle('PEP preview ' + date).addMetaTag('viewport', 'width=device-width,initial-scale=1,viewport-fit=cover');
 }
 function approve_(c, date, st, folder) {
@@ -508,7 +523,7 @@ function btn_(href, label, dark) {
     (dark ? 'background:#1a1a1a;color:#fff' : 'background:#fec91b;color:#1a1406') + '">' + label + '</a>';
 }
 function mailDraft_(c, issue, st, again, reminder) {
-  var base = ScriptApp.getService().getUrl() + '?d=' + issue.date + '&t=' + st.token;
+  var base = WEBAPP_URL + '?d=' + issue.date + '&t=' + st.token;
   var when = Utilities.formatDate(dueTime_(issue.date, c.publish), TZ, "EEEE 'at' h:mm a");
   var subj = (reminder ? 'Reminder: ' : again ? 'Updated, please approve again: ' : '') + 'PEP Magazine for ' + prettyDate_(issue.date);
   var warn = issue.warnings && issue.warnings.length ? '<p style="color:#9a3412"><b>Check:</b> ' + issue.warnings.join(' ') + '</p>' : '';

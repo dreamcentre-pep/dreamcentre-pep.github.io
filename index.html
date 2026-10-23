@@ -502,6 +502,11 @@ function boot(data){
 }
 
 if(window.PEP_DATA)boot(window.PEP_DATA);
+else if(new URLSearchParams(location.search).get('preview')){
+  let done=false;
+  window.addEventListener('message',e=>{const d=e.data;if(done||!d||!d.pepPreview)return;done=true;window.PEP_ASSETS=d.assets||{};boot(d)});
+  try{parent.postMessage('pep-ready','*')}catch(e){}
+}
 else{
   const q=new URLSearchParams(location.search).get('issue');
   const url=q&&/^\d{4}-\d{2}-\d{2}$/.test(q)?`data/issues/${q}.json`:'data/current.json';
