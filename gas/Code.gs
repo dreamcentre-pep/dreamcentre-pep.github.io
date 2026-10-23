@@ -23,6 +23,7 @@ function cfg_() {
     notify: list(c['notify emails']),
     mode: (c['image mode'] || 'Library + stock').toLowerCase(),
     pexels: c['pexels api key'] || '',
+    pixabay: c['pixabay api key'] || '',
     publish: parseDayTime_(c['publish day and time'] || 'Saturday 18:00'),
     reminder: parseDayTime_(c['reminder day and time'] || 'Saturday 15:00'),
     website: (c['website'] || 'https://dreamcentre-pep.github.io').replace(/\/$/, ''),
@@ -348,10 +349,10 @@ function pickImage_(slot, kw, folder, sec, c, used, exclude, allowStock) {
   }
   if (!allowStock) return null;
   var words = keywords_(kw), mode = c.mode;
-  var useLib = mode.indexOf('library') >= 0, useStock = mode.indexOf('stock') >= 0 && c.pexels;
+  var useLib = mode.indexOf('library') >= 0, useStock = mode.indexOf('stock') >= 0 && (c.pexels || c.pixabay);
   var lib = useLib ? libraryPick_(words, c, used, exclude, mode.indexOf('stock') < 0) : null;
   if (lib && lib.score > 0) return lib;
-  if (useStock) { var p = pexelsPick_(words, slot, c, used, exclude); if (p) return p; }
+  if (useStock) { var p = (c.pexels && pexelsPick_(words, slot, c, used, exclude)) || (c.pixabay && pixabayPick_(words, slot, c, used, exclude)); if (p) return p; }
   return lib || (useLib ? null : libraryPick_(words, c, used, exclude, true));
 }
 function libraryPick_(words, c, used, exclude, anyIfNoMatch) {
@@ -379,6 +380,22 @@ function pexelsPick_(words, slot, c, used, exclude) {
     var key = 'p:' + photos[i].id;
     if ((used[key] && used[key] !== CUR_DATE) || exclude.indexOf(key) >= 0) continue;
     return { url: photos[i].src.large2x || photos[i].src.large, key: key, credit: 'Photo: ' + photos[i].photographer + ' / Pexels', avg: photos[i].avg_color };
+  }
+  return null;
+}
+function pixabayPick_(words, slot, c, used, exclude) {
+  var q = words.slice(0, 3).join(' ') || 'light';
+  for (var attempt = 0; attempt < 2; attempt++) {
+    var res = UrlFetchApp.fetch('https://pixabay.com/api/?image_type=photo&safesearch=true&per_page=40&orientation=' +
+      (slot === 'covenant' ? 'all' : 'horizontal') + '&key=' + encodeURIComponent(c.pixabay) + '&q=' + encodeURIComponent(q), { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return null;
+    var hits = JSON.parse(res.getContentText()).hits || [];
+    for (var i = 0; i < hits.length; i++) {
+      var key = 'x:' + hits[i].id;
+      if ((used[key] && used[key] !== CUR_DATE) || exclude.indexOf(key) >= 0) continue;
+      return { url: hits[i].largeImageURL || hits[i].webformatURL, key: key, credit: 'Image: ' + hits[i].user + ' / Pixabay' };
+    }
+    q = words.slice(0, 1).join(' ') || 'light';
   }
   return null;
 }
@@ -459,8 +476,9 @@ function preview_(c, date, st, folder) {
   var pv = b.issue.preview; b.issue.preview = null; b.issue.status = 'approved';
   var bar = pv.status === 'Draft'
     ? 'Preview only. Not public yet. <a class="ok" target="_top" href="' + pv.approve + '">Approve this issue</a>' +
-      pv.swap.map(function (s) { return ' <a target="_top" href="' + s.url + '">New ' + s.slot + ' image</a>'; }).join('')
-    : 'This issue is approved (' + pv.status + ').';
+      pv.swap.map(function (s) { return ' <a target="_top" href="' + s.url + '">New ' + s.slot + ' image</a>'; }).join('') +
+      ' <a href="#" onclick="openPrint();return false">Print or save as PDF</a>'
+    : 'This issue is approved (' + pv.status + '). <a href="#" onclick="openPrint();return false">Print or save as PDF</a>';
   var html = '<style>html,body{margin:0;height:100%;font-family:Arial,sans-serif}' +
     '.bar{background:#b3261e;color:#fff;font-weight:bold;font-size:14px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:center}' +
     '.bar a{color:#fff}.bar a.ok{background:#fff;color:#b3261e;padding:7px 14px;border-radius:99px;text-decoration:none}' +
@@ -469,7 +487,8 @@ function preview_(c, date, st, folder) {
     '<iframe id="f" src="' + c.website + '/?preview=1&v=' + Date.now() + '"></iframe>' +
     '<script>var D=' + JSON.stringify(data).replace(/</g, '\\u003c') + ';var f=document.getElementById("f");' +
     'function send(){f.contentWindow.postMessage(D,"*")}f.addEventListener("load",function(){send();setTimeout(send,800)});' +
-    'window.addEventListener("message",function(e){if(e.data==="pep-ready")send()});</script>';
+    'window.addEventListener("message",function(e){if(e.data==="pep-ready"&&e.source)e.source.postMessage(D,"*")});' +
+    'function openPrint(){var w=window.open("' + c.website + '/?preview=1&print=1&v=' + Date.now() + '","_blank");if(!w)alert("Allow pop-ups for this page to print.")}</script>';
   return HtmlService.createHtmlOutput(html).setTitle('PEP preview ' + date).addMetaTag('viewport', 'width=device-width,initial-scale=1,viewport-fit=cover');
 }
 function approve_(c, date, st, folder) {

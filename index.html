@@ -251,6 +251,8 @@ details.region ul{margin:0;padding:0 18px 14px 36px;display:flex;flex-direction:
 .print-mode .shell{grid-template-columns:1fr!important}
 .print-mode main{padding:0 24px!important}
 .print-page{break-after:page;padding-block:20px}
+.print-tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding-block:16px}
+@media print{.print-tools{display:none}}
 .print-mode .card{box-shadow:none}
 .print-mode .tile p{-webkit-line-clamp:unset}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
@@ -478,8 +480,14 @@ function hslHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),
 function renderPrint(){
   document.body.classList.add('print-mode');
   const main=document.getElementById('main');
-  main.innerHTML=['today','heart','month','study','worship','testimony'].map(v=>`<div class="print-page">${V[v]()}</div>`).join('')+`<div class="print-page">${V.daily(true)}</div>`;
+  main.innerHTML=`<div class="print-tools"><button class="btn" id="printBtn" type="button">Print or save as PDF</button><span class="page-sub">Choose "Save as PDF" as the printer to keep a copy. Paper size A4.</span></div>`+
+    ['today','heart','month','study','worship','testimony'].map(v=>`<div class="print-page">${V[v]()}</div>`).join('')+`<div class="print-page">${V.daily(true)}</div>`;
   if(!I.accent)accentFromImage(document.getElementById('coverImg'));
+  document.getElementById('printBtn').addEventListener('click',()=>window.print());
+  if(new URLSearchParams(location.search).get('preview')){
+    const imgs=[...document.images];
+    Promise.all(imgs.map(im=>im.complete?1:new Promise(r=>{im.onload=im.onerror=r}))).then(()=>setTimeout(()=>window.print(),600));
+  }
 }
 
 function boot(data){
@@ -505,7 +513,7 @@ if(window.PEP_DATA)boot(window.PEP_DATA);
 else if(new URLSearchParams(location.search).get('preview')){
   let done=false;
   window.addEventListener('message',e=>{const d=e.data;if(done||!d||!d.pepPreview)return;done=true;window.PEP_ASSETS=d.assets||{};boot(d)});
-  try{parent.postMessage('pep-ready','*')}catch(e){}
+  try{(window.opener||parent).postMessage('pep-ready','*')}catch(e){}
 }
 else{
   const q=new URLSearchParams(location.search).get('issue');
