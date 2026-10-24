@@ -28,7 +28,9 @@ function cfg_() {
     reminder: parseDayTime_(c['reminder day and time'] || 'Saturday 15:00'),
     website: (c['website'] || 'https://dreamcentre-pep.github.io').replace(/\/$/, ''),
     issues: c['issues folder id'], monthly: c['monthly folder id'],
-    library: c['image library folder id'], templates: c['templates folder id']
+    library: c['image library folder id'], templates: c['templates folder id'],
+    docs: { bible: docId_(c['bible in a year doc']), vocab: docId_(c['anointed vocabulary doc']), prophetic: docId_(c['prophetic words doc']),
+      covenants: docId_(c['covenants doc']), hymns: docId_(c['hymns doc']) }
   };
 }
 function parseDayTime_(s) {
@@ -273,10 +275,10 @@ function buildIssue_(folder, file, c) {
     fathersHeart: fh ? { title: f_(fh, 'title'), salutation: salutation, paragraphs: ps, quote: f_(fh, 'quote') || (ps[1] || '').split('. ')[0], closing: closing, signature: "God's Servant,\nRev. Olusola Areogun" } : null,
     messageForWeek: S.messagefortheweek && f_(S.messagefortheweek, 'title') ? { title: f_(S.messagefortheweek, 'title'), image: null } : null,
     bookForWeek: S.bookfortheweek && f_(S.bookfortheweek, 'title') ? { title: f_(S.bookfortheweek, 'title'), authors: f_(S.bookfortheweek, 'authors'), image: null } : null,
-    hymn: hy ? { title: f_(hy, 'title'), reference: f_(hy, 'reference') } : null,
+    hymn: hy && f_(hy, 'title') ? { title: f_(hy, 'title'), reference: f_(hy, 'reference') } : null,
     study: st ? { number: f_(st, 'study number'), title: f_(st, 'title'), image: null, blocks: st.blocks.map(function (b) { if (b.list) return { list: b.list }; return b; }) } : null,
     greaterWorks: gw ? { reference: f_(gw, 'reference'), text: f_(gw, 'text'), image: null } : null,
-    covenant: cv ? { title: f_(cv, 'title'), line: f_(cv, 'line'), image: null } : null,
+    covenant: cv && f_(cv, 'title') ? { title: f_(cv, 'title'), line: f_(cv, 'line'), image: null } : null,
     bibleInYear: bible,
     vocabulary: av ? { reference: f_(av, 'reference'), verse: f_(av, 'verse'), items: av.blocks.filter(function (b) { return b.list; }).reduce(function (a, b) { return a.concat(b.list); }, []) } : null,
     propheticWords: S.prophetic ? S.prophetic.blocks.reduce(function (a, b) { return a.concat(b.list || (b.p ? [b.p] : [])); }, []) : [],
@@ -285,7 +287,8 @@ function buildIssue_(folder, file, c) {
     credits: [], warnings: warn
   };
   if (!issue.fathersHeart) warn.push("From the Father's Heart is missing.");
-  if (!bible.length) warn.push('Bible in a Year readings are missing.');
+
+  autoFill_(issue, c, warn);
 
   // Images
   CUR_DATE = date;
@@ -554,4 +557,147 @@ function mailDraft_(c, issue, st, again, reminder) {
 }
 function notifyError_(what, e) {
   try { mail_(cfg_().notify, 'PEP Magazine: ' + what, '<p>' + what + '.</p><p style="color:#666">' + String(e && e.message || e) + '</p>'); } catch (x) { }
+}
+
+/** Remove an issue completely (status, approval, sheet row, folder). Edit the date and run. */
+function removeIssue(date) {
+  date = date || '2026-12-06';
+  var st = getJ_('st:' + date, null);
+  if (st && st.folder) { props_.deleteProperty('fp:' + st.folder); props_.deleteProperty('swap:' + st.folder); try { DriveApp.getFolderById(st.folder).setTrashed(true); } catch (e) { } }
+  ['st:', 'flags:'].forEach(function (k) { props_.deleteProperty(k + date); });
+  setJ_('approvedDates', getJ_('approvedDates', []).filter(function (d) { return d !== date; }));
+  var sh = statusSheet_(), v = sh.getDataRange().getValues();
+  for (var i = v.length - 1; i > 0; i--) if (String(v[i][0]) === date) sh.deleteRow(i + 1);
+  Logger.log('Removed ' + date);
+}
+
+
+/* ---------------- weekly sources (Bible in a Year, vocabulary, prophetic words, covenants, hymns) ---------------- */
+var SEED_DATE = '2026-10-18';
+function docId_(s) { var m = String(s || '').match(/[-\w]{25,}/); return m ? m[0] : ''; }
+function docParas_(id) {
+  return DocumentApp.openById(id).getBody().getParagraphs().map(function (p) { return p.getText().replace(/\u00a0/g, ' ').trim(); });
+}
+function weeks_(a, b) { return Math.round((Date.parse(b) - Date.parse(a)) / (7 * 864e5)); }
+/** Stable weekly position: once a Sunday gets a number it keeps it. */
+function seq_(name, date, seedIdx, step) {
+  var map = getJ_('seq:' + name, {});
+  if (map[date] != null) return map[date];
+  var base = SEED_DATE, idx = seedIdx;
+  Object.keys(map).forEach(function (d) { if (d < date && d > base) { base = d; idx = map[d]; } });
+  var v = idx + weeks_(base, date) * step;
+  map[date] = v; setJ_('seq:' + name, map); return v;
+}
+function mod_(n, m) { return ((n % m) + m) % m; }
+
+function autoFill_(issue, c, warn) {
+  var d = c.docs || {};
+  var tryIt = function (label, fn) { try { fn(); } catch (e) { warn.push(label + ' could not be read: ' + e.message); } };
+  if (!issue.bibleInYear.length && d.bible) tryIt('Bible in a Year', function () { issue.bibleInYear = autoBible_(d.bible, issue.date); });
+  if (!issue.bibleInYear.length) warn.push('Bible in a Year readings are missing.');
+  if ((!issue.vocabulary || !issue.vocabulary.items.length) && d.vocab) tryIt('Anointed Vocabulary', function () { issue.vocabulary = autoVocab_(d.vocab, issue.date); });
+  if (!issue.propheticWords.length && d.prophetic) tryIt('Prophetic Words', function () { issue.propheticWords = autoProphetic_(d.prophetic, issue.date); });
+  if (!issue.covenant && d.covenants) tryIt('Covenants', function () { issue.covenant = autoCovenant_(d.covenants, issue.date); });
+  if (!issue.hymn && d.hymns) tryIt('Hymns', function () { issue.hymn = autoHymn_(d.hymns, issue.date); });
+  if (!issue.hymn) warn.push('No hymn found for this Sunday in the Hymns doc.');
+}
+
+function autoBible_(id, sunday) {
+  var map = {}, month = 0, cur = null;
+  docParas_(id).forEach(function (t) {
+    if (!t) return;
+    var mn = MONTHS.indexOf(t.toLowerCase());
+    if (mn >= 0) { month = mn + 1; cur = null; return; }
+    if (!month) return;
+    var m = t.match(/^day\s*(\d{1,2})\s*-?\s*(.*)$/i) || t.match(/^(\d{2})\s*([A-Za-z].*)$/);
+    if (m) { cur = map[month + '-' + (+m[1])] = [m[2].trim()]; return; }
+    if (!cur) return;
+    if (/^\d+:\d/.test(t)) { cur[cur.length - 1] += (/\.$/.test(cur[cur.length - 1]) ? ' ' : '') + t; return; }
+    if (cur.length < 4) cur.push(t);
+  });
+  var out = [], p = sunday.split('-');
+  for (var i = 0; i < 7; i++) {
+    var dt = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + i, 12));
+    var r = map[(dt.getUTCMonth() + 1) + '-' + dt.getUTCDate()];
+    if (r) out.push({ date: Utilities.formatDate(dt, 'UTC', 'yyyy-MM-dd'), readings: r.slice(0, 4) });
+  }
+  return out;
+}
+
+function autoVocab_(id, date) {
+  var entries = [], cur = null;
+  docParas_(id).forEach(function (raw) {
+    var t = raw.replace(/^[\-\u2013\u2022*\\]+\s*/, '').trim();
+    var m = raw.match(/^\**\s*DAY\s*(\d+)\s*\**$/i);
+    if (m) { cur = { head: 'DAY ' + m[1], reference: '', verse: '', items: [] }; entries.push(cur); return; }
+    if (!cur || !t) return;
+    if (!cur.reference && !cur.items.length && /\d+:\d+/.test(t) && !/^[\-\u2013\u2022]/.test(raw)) {
+      var q = t.search(/[\u201c"]/);
+      cur.reference = (q > 0 ? t.slice(0, q) : t).trim();
+      cur.verse = q > 0 ? t.slice(q).replace(/^[\u201c"]+|[\u201d"]+\.?$/g, '').trim() : '';
+      return;
+    }
+    cur.items.push(t);
+  });
+  entries = entries.filter(function (e) { return e.items.length; });
+  if (!entries.length) throw new Error('no DAY entries found');
+  var seed = 0; for (var i = 0; i < entries.length; i++) if (entries[i].head === 'DAY 48') { seed = i; break; }
+  var e = entries[mod_(seq_('vocab', date, seed, 1), entries.length)];
+  return { reference: e.reference, verse: e.verse, items: e.items, day: e.head };
+}
+
+function propheticPool_(id) {
+  return docParas_(id).map(function (t) {
+    t = t.replace(/^2026\s*:\s*/, '').replace(/\s+/g, ' ').trim();
+    if (!t || /:$/.test(t)) return null;
+    if (/^(day \d+|divine moves|collation|\d+(st|nd|rd|th)?\s)|session|edition|fasting and prayer/i.test(t)) return null;
+    if (/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b.*\d{4}/i.test(t)) return null;
+    var w = t.split(' ').length; return w >= 2 && w <= 12 ? t : null;
+  }).filter(Boolean);
+}
+function autoProphetic_(id, date) {
+  var pool = propheticPool_(id), n = 10; if (!pool.length) throw new Error('no short declarations found');
+  var pos = 0; for (var i = 0; i < pool.length; i++) if (/^multiplication power/i.test(pool[i])) { pos = i + 1; break; }
+  var start = seq_('prophetic', date, pos - n, n), out = [];
+  for (var k = 0; k < n; k++) out.push(pool[mod_(start + k, pool.length)]);
+  return out;
+}
+
+function autoCovenant_(id, date) {
+  var list = [], cur = null;
+  docParas_(id).forEach(function (t) {
+    if (!t || /^tip:/i.test(t) || /^covenants of the dream centre$/i.test(t)) return;
+    var m = t.match(/^(\d+)\.\s*(.*)$/);
+    if (m) { cur = { number: m[1], lines: [m[2].trim()] }; list.push(cur); return; }
+    if (cur) cur.lines.push(t.replace(/^[\-\u2013\u2022]\s*/, ''));
+  });
+  if (!list.length) throw new Error('no numbered covenants found');
+  var cv = list[mod_(seq_('covenant', date, -1, 1), list.length)];
+  return { number: cv.number, title: cv.lines[0], line: cv.lines.slice(1).join('\n'), image: null };
+}
+
+function autoHymn_(id, date) {
+  var ym = '', found = [];
+  docParas_(id).forEach(function (t) {
+    if (!t) return;
+    var h = t.match(/^([a-z]+)\s+(\d{4})$/i);
+    if (h && monthNo_(h[1])) { ym = h[2] + '-' + ('0' + monthNo_(h[1])).slice(-2); return; }
+    var m = t.match(/^(\d{1,2})(?:st|nd|rd|th)?\s*[-\u2013\u2014:.]?\s+(.+)$/i);
+    if (!m || !ym || ym + '-' + ('0' + m[1]).slice(-2) !== date) return;
+    var text = m[2].trim(), pg = text.match(/\(?\s*pg\.?\s*(\d+)\s*\)?\s*$/i);
+    found.push({ title: pg ? text.slice(0, pg.index).trim() : text, page: pg ? pg[1] : '' });
+  });
+  if (!found.length) return null;
+  var pages = found.filter(function (f) { return f.page; }).map(function (f) { return f.page; });
+  return { title: found.map(function (f) { return f.title; }).join(' \u00b7 '),
+    reference: pages.length ? (pages.length > 1 ? 'Pages ' + pages.join(' and ') : 'Page ' + pages[0]) + ' of the Songs of the Oasis' : 'Songs of the Oasis' };
+}
+
+/** Replace the weekly Word template in Drive with the latest one from the website repository. Run from the editor. */
+function installTemplate() {
+  var c = cfg_(), folder = DriveApp.getFolderById(c.templates), name = 'PEP Weekly Template.docx';
+  var blob = UrlFetchApp.fetch('https://raw.githubusercontent.com/dreamcentre-pep/dreamcentre-pep.github.io/main/templates/' + encodeURIComponent(name)).getBlob().setName(name);
+  var old = folder.getFilesByName(name); while (old.hasNext()) old.next().setTrashed(true);
+  folder.createFile(blob);
+  Logger.log('Template installed');
 }
