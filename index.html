@@ -249,7 +249,8 @@ details.region ul{margin:0;padding:0 18px 14px 36px;display:flex;flex-direction:
 .preview-bar{position:sticky;top:0;z-index:40;background:#b3261e;color:#fff;font-weight:700;font-size:13px;text-align:center;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center}
 .preview-bar[hidden]{display:none}
 .pb-btn{background:#fff;color:#b3261e;padding:7px 14px;border-radius:99px;text-decoration:none}
-.pb-link{color:#fff;opacity:.9}
+.pb-link{color:#fff;opacity:.9;background:none;border:0;padding:0;font:inherit;text-decoration:underline;cursor:pointer}
+.pb-btn{border:0;font:inherit;font-weight:800;cursor:pointer}
 .print-mode .side,.print-mode .top,.print-mode .tabbar,.print-mode .preview-bar{display:none!important}
 .print-mode .shell{grid-template-columns:1fr!important}
 .print-mode main{padding:0 24px!important}
@@ -495,13 +496,48 @@ function renderPrint(){
   }
 }
 
+/* ---------- draft preview served from the website (no Google sign-in needed) ---------- */
+async function loadPreview(d,t,act){
+  const main=document.getElementById('main');
+  main.innerHTML='<div class="view"><p class="page-sub">Loading the preview. This can take up to half a minute.</p></div>';
+  try{
+    const cfg=await fetch('config.json',{cache:'no-store'}).then(r=>r.json());
+    const api=q=>fetch(cfg.feed+'?'+new URLSearchParams(Object.assign({d,t},q)),{cache:'no-store'}).then(r=>r.json());
+    let msg='';
+    if(act==='approve'){const r=await api({p:'approve',json:1});msg=r.message||'';
+      try{history.replaceState(null,'',location.pathname+'?preview='+d+'&t='+t+location.hash)}catch(e){}}
+    const [site,pd]=await Promise.all([fetch('data/site.json',{cache:'no-store'}).then(r=>r.json()),api({p:'pdata'})]);
+    if(!pd.ok)throw new Error('not ok');
+    window.PEP_ASSETS=pd.assets||{};
+    pd.issue.preview={api,status:pd.status,when:pd.when,swap:pd.swap||[],d,t,msg};
+    boot({site,issue:pd.issue,month:pd.month});
+  }catch(e){
+    main.innerHTML='<div class="view"><p>This preview link could not be opened. Use the newest link from the email or from the Issues tab of the PEP Settings sheet.</p></div>';
+  }
+}
+function renderPreviewBar(pb){
+  const P=I.preview,printUrl=`?preview=${P.d}&t=${P.t}&print=1`;
+  const printLink=`<a class="pb-link" href="${printUrl}" target="_blank" rel="noopener">Print or save as PDF</a>`;
+  if(P.status==='Draft'){
+    pb.innerHTML=`${P.msg?esc(P.msg)+' ':'Preview only. Not public yet.'} <button class="pb-btn" id="pbApprove" type="button">Approve this issue</button>${P.swap.map(s=>` <button class="pb-link pb-swap" data-slot="${s}" type="button">New ${s} image</button>`).join('')} ${printLink}`;
+    document.getElementById('pbApprove').onclick=async e=>{e.target.disabled=true;e.target.textContent='Approving...';
+      try{const r=await P.api({p:'approve',json:1});P.status=r.status||'Approved';P.msg=r.message||'Approved.';}catch(x){P.msg='Approval did not go through. Check your connection and try again.'}
+      renderPreviewBar(pb)};
+    pb.querySelectorAll('.pb-swap').forEach(b=>b.onclick=async()=>{b.disabled=true;b.textContent='Picking a new image...';
+      try{await P.api({p:'swap',s:b.dataset.slot,json:1});location.reload()}catch(x){b.textContent='Could not change the image'}});
+  }else{
+    pb.innerHTML=`${esc(P.msg||('This issue is approved. It goes live '+(P.when||'on Saturday')+'.'))} ${printLink}`;
+  }
+}
+
 function boot(data){
   S=data.site;I=data.issue;M=data.month||null;
   I.bibleInYear=I.bibleInYear||[];
   applyAccent(I.accent||'#fec91b');
   document.documentElement.style.setProperty('--logo',`url("${src(S.logo)}")`);
   const pb=document.getElementById('previewBar');
-  if(I.preview){pb.hidden=false;pb.innerHTML=I.preview.status==='Draft'?
+  if(I.preview&&I.preview.api){pb.hidden=false;renderPreviewBar(pb)}
+  else if(I.preview){pb.hidden=false;pb.innerHTML=I.preview.status==='Draft'?
       `Preview. Not public yet. <a class="pb-btn" target="_top" href="${esc(I.preview.approve)}">Approve this issue</a>${I.preview.swap.map(s=>` <a class="pb-link" target="_top" href="${esc(s.url)}">New ${s.slot} image</a>`).join('')}`:
       `Preview. This issue is approved (${esc(I.preview.status)}).`}
   else pb.hidden=I.status==='approved';
@@ -515,6 +551,9 @@ function boot(data){
 }
 
 if(window.PEP_DATA)boot(window.PEP_DATA);
+else if(/^\d{4}-\d{2}-\d{2}$/.test(new URLSearchParams(location.search).get('preview')||'')&&new URLSearchParams(location.search).get('t')){
+  const qs=new URLSearchParams(location.search);loadPreview(qs.get('preview'),qs.get('t'),qs.get('do'));
+}
 else if(new URLSearchParams(location.search).get('preview')){
   let done=false;
   window.addEventListener('message',e=>{const d=e.data;if(done||!d||!d.pepPreview)return;done=true;window.PEP_ASSETS=d.assets||{};boot(d)});

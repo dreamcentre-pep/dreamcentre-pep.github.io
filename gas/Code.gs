@@ -62,18 +62,20 @@ function statusSheet_() {
   var ss = SpreadsheetApp.openById(SETTINGS_ID), sh = ss.getSheetByName('Issues');
   if (!sh) {
     sh = ss.insertSheet('Issues');
-    sh.appendRow(['Sunday', 'Status', 'Last built', 'Approved at', 'Published at', 'Notes']);
-    sh.setFrozenRows(1); sh.getRange('A1:F1').setFontWeight('bold');
+    sh.appendRow(['Sunday', 'Status', 'Last built', 'Approved at', 'Published at', 'Notes', 'Preview link']);
+    sh.setFrozenRows(1); sh.getRange('A1:G1').setFontWeight('bold');
   }
   return sh;
 }
 function setStatus_(date, fields) {
   var sh = statusSheet_(), vals = sh.getDataRange().getValues(), row = -1;
-  for (var i = 1; i < vals.length; i++) if (String(vals[i][0]) === date) row = i + 1;
-  if (row < 0) { sh.appendRow([date, '', '', '', '', '']); row = sh.getLastRow(); }
-  var cols = { status: 2, built: 3, approved: 4, published: 5, notes: 6 };
+  for (var i = 1; i < vals.length; i++) if (cellDate_(vals[i][0]) === date) row = i + 1;
+  if (row < 0) { row = sh.getLastRow() + 1; sh.getRange(row, 1).setNumberFormat('@').setValue(date); }
+  if (sh.getRange(1, 7).getValue() !== 'Preview link') sh.getRange(1, 7).setValue('Preview link').setFontWeight('bold');
+  var cols = { status: 2, built: 3, approved: 4, published: 5, notes: 6, link: 7 };
   Object.keys(fields).forEach(function (k) { sh.getRange(row, cols[k]).setNumberFormat('@').setValue(fields[k]); });
 }
+function cellDate_(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'yyyy-MM-dd') : String(v).trim(); }
 function stamp_() { return Utilities.formatDate(new Date(), TZ, 'EEE d MMM, HH:mm'); }
 
 /* ---------------- setup ---------------- */
@@ -129,7 +131,7 @@ function scanIssues_(c) {
       st.status = 'Draft'; st.built = stamp_();
       setJ_('st:' + issue.date, st);
       writeJson_(folder, '_issue.json', issue);
-      setStatus_(issue.date, { status: 'Waiting for approval', built: st.built, notes: issue.warnings.join(' ') });
+      setStatus_(issue.date, { status: 'Waiting for approval', built: st.built, notes: issue.warnings.join(' '), link: siteLink_(c, issue.date, st.token) });
       if (!st.mailed || wasApproved) { mailDraft_(c, issue, st, wasApproved); st.mailed = true; setJ_('st:' + issue.date, st); }
       props_.setProperty(key, fp);
     } catch (e) { notifyError_('Could not read the issue in folder "' + folder.getName() + '"', e); props_.setProperty(key, fp); }
@@ -433,16 +435,35 @@ function doGet(e) {
     var st = p.d ? getJ_('st:' + p.d, null) : null;
     if (!st || p.t !== st.token) return page_('Link not valid', 'This link is out of date. Use the newest email about this issue.');
     var folder = DriveApp.getFolderById(st.folder);
+    if (p.p === 'pdata') return json_(pdata_(c, p.d, st, folder));
+    if (p.p === 'approve' && p.json) { approve_(c, p.d, st, folder); st = getJ_('st:' + p.d, st); return json_({ ok: true, status: st.status, message: 'Approved. It will go live ' + whenLive_(p.d, st, c) + '.' }); }
     if (p.p === 'approve') return approve_(c, p.d, st, folder);
     if (p.p === 'swap') {
       var issue = readJson_(folder, '_issue.json'), slot = p.s;
       var cur = { cover: issue.service.background, study: issue.study && issue.study.image, covenant: issue.covenant && issue.covenant.image, greater: issue.greaterWorks && issue.greaterWorks.image }[slot];
       var ex = getJ_('swap:' + folder.getId(), []); if (cur && cur.key) ex.push(cur.key); setJ_('swap:' + folder.getId(), ex.slice(-60));
       props_.deleteProperty('fp:' + folder.getId()); tick();
+      if (p.json) return json_({ ok: true });
       return page_('New image picked', 'A different ' + slot + ' image has been chosen. <a target="_top" href="' + WEBAPP_URL + '?p=preview&d=' + p.d + '&t=' + p.t + '">Open the preview again</a>');
     }
     return preview_(c, p.d, st, folder);
   } catch (err) { return page_('Something went wrong', String(err)); }
+}
+function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function siteLink_(c, date, token) { return c.website + '/?preview=' + date + '&t=' + token; }
+/** Draft data for the preview page on the website. The cover and Drive images are sent inline. */
+function pdata_(c, date, st, folder) {
+  var issue = readJson_(folder, '_issue.json'), b = bundleFor_(c, issue, false), assets = {};
+  Object.keys(b.assets).forEach(function (k) {
+    var ref = b.assets[k]; if (!ref) return;
+    assets[k] = (k === 'cover' || ref.drive) ? dataUri_(ref) : ref.url;
+  });
+  b.issue.status = 'draft';
+  var swap = ['cover', 'study', 'covenant', 'greater'].filter(function (s) {
+    var r = { cover: issue.service.background, study: issue.study && issue.study.image, covenant: issue.covenant && issue.covenant.image, greater: issue.greaterWorks && issue.greaterWorks.image }[s];
+    return r && !r.drive;
+  });
+  return { ok: true, status: st.status, when: whenLive_(date, st, c), issue: b.issue, month: b.month, assets: assets, swap: swap };
 }
 function page_(title, msg) {
   return HtmlService.createHtmlOutput('<div style="font-family:system-ui,sans-serif;max-width:520px;margin:15vh auto;padding:0 20px"><h2>' + title + '</h2><p style="font-size:17px;line-height:1.5">' + msg + '</p></div>')
@@ -545,14 +566,14 @@ function btn_(href, label, dark) {
     (dark ? 'background:#1a1a1a;color:#fff' : 'background:#fec91b;color:#1a1406') + '">' + label + '</a>';
 }
 function mailDraft_(c, issue, st, again, reminder) {
-  var base = WEBAPP_URL + '?d=' + issue.date + '&t=' + st.token;
+  var base = siteLink_(c, issue.date, st.token);
   var when = Utilities.formatDate(dueTime_(issue.date, c.publish), TZ, "EEEE 'at' h:mm a");
   var subj = (reminder ? 'Reminder: ' : again ? 'Updated, please approve again: ' : '') + 'PEP Magazine for ' + prettyDate_(issue.date);
   var warn = issue.warnings && issue.warnings.length ? '<p style="color:#9a3412"><b>Check:</b> ' + issue.warnings.join(' ') + '</p>' : '';
   mail_(c.approvers.concat(c.notify), subj,
     '<p>The PEP Magazine for <b>' + prettyDate_(issue.date) + '</b> is ready' + (again ? ' again after changes' : '') + '.</p>' +
     '<p>Open the preview, check it, then tap <b>Approve</b>. Once approved it goes live on ' + when + '. If it is approved after that, it goes live straight away.</p>' +
-    warn + '<p>' + btn_(base + '&p=preview', 'Open preview', true) + btn_(base + '&p=approve', 'Approve') + '</p>' +
+    warn + '<p>' + btn_(base, 'Open preview', true) + btn_(base + '&do=approve', 'Approve') + '</p>' +
     '<p style="color:#666;font-size:13px">In the preview you can also ask for a different picture. Until this issue is approved, last week\'s issue stays online.</p>');
 }
 function notifyError_(what, e) {
@@ -567,7 +588,7 @@ function removeIssue(date) {
   ['st:', 'flags:'].forEach(function (k) { props_.deleteProperty(k + date); });
   setJ_('approvedDates', getJ_('approvedDates', []).filter(function (d) { return d !== date; }));
   var sh = statusSheet_(), v = sh.getDataRange().getValues();
-  for (var i = v.length - 1; i > 0; i--) if (String(v[i][0]) === date) sh.deleteRow(i + 1);
+  for (var i = v.length - 1; i > 0; i--) if (cellDate_(v[i][0]) === date) sh.deleteRow(i + 1);
   Logger.log('Removed ' + date);
 }
 
