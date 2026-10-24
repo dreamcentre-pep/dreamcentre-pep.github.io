@@ -111,6 +111,8 @@ img{display:block}
 .rail img.bk{height:34mm;width:auto;margin:0 auto;box-shadow:0 .6mm 1.6mm rgba(0,0,0,.25)}
 .rail .tt{font-family:var(--display);font-size:7.6pt;line-height:1.2}
 .rail .tt.sm{font-size:6.4pt}
+.rail img.bk.solo{height:62mm;margin-top:2mm}
+.rail .tt.sm.solo{font-size:8pt}
 .rail .order{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:1.2mm;font-size:6.4pt;font-weight:700;line-height:1.3}
 .rail .order img{width:20mm;height:20mm}
 .rail .order b{font-family:var(--display);font-weight:400;font-size:7pt}
@@ -150,13 +152,14 @@ img{display:block}
 .gw .disp.k{font-size:16pt;line-height:.95}
 .gw .disp.k small{display:block;font-size:6.6pt;letter-spacing:.3em;margin-top:.8mm}
 .gw .ref{font-family:var(--display);font-size:8.4pt;margin-top:2.5mm}
-.gw .q{font-family:var(--display);font-size:8.6pt;line-height:1.3;color:var(--accent);margin-top:1.6mm;max-width:118mm;text-align:right}
+.gw .q{font-family:var(--display);font-size:8.6pt;line-height:1.3;color:#fec91b;margin-top:1.6mm;max-width:118mm;text-align:right}
 .cov{position:relative;flex:1;overflow:hidden;background:var(--dark);color:#fff}
 .cov::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.2) 50%,rgba(0,0,0,.65))}
 .cov .in{position:absolute;inset:0;z-index:2;padding:3.5mm calc(4mm + var(--xs)) calc(3.5mm + var(--xs)) 4mm;display:flex;flex-direction:column}
 .cov .k{font-family:var(--caps);font-size:11pt;line-height:1}
 .cov .k small{display:block;font-size:6.5pt;letter-spacing:.12em;margin-top:.6mm}
-.cov .big{font-family:var(--display);font-size:13pt;line-height:1.08;margin:auto 0;text-transform:uppercase}
+.cov .in{overflow:hidden}
+.cov .big{font-family:var(--display);font-size:13pt;line-height:1.08;margin:auto 0;text-transform:uppercase;overflow-wrap:break-word}
 .cov .line{font-family:var(--read);font-style:italic;font-size:7.6pt;text-align:right}
 
 /* ---------- page 4: Bible in a Year, Vocabulary, Prophetic Words, Testimony ---------- */
@@ -278,7 +281,7 @@ function p1(){
     </section>
     <aside class="rail">
       ${mw?`<span class="lab">Message for the Week</span>${mw.image?`<img class="mw" src="${src(mw.image)}" alt="">`:''}<span class="tt">${esc(mw.title)}</span>`:''}
-      ${bk?`<span class="lab">Book for the Week</span>${bk.image?`<img class="bk" src="${src(bk.image)}" alt="">`:''}<span class="tt sm">${esc(bk.title)}</span>`:''}
+      ${bk?`<span class="lab">Book for the Week</span>${bk.image?`<img class="bk${mw?'':' solo'}" src="${src(bk.image)}" alt="">`:''}<span class="tt sm${mw?'':' solo'}">${esc(bk.title)}</span>`:''}
       <div class="order">${o.qr?`<img src="${src(o.qr)}" alt=""><b>Scan to order</b>`:''}<span>To order your copy of books and messages visit <span class="u">${esc(o.site)}</span> or call ${esc(o.phone)}</span></div>
     </aside>
   </div>`,'p1');
@@ -291,7 +294,7 @@ function p2(){
   <section class="month-hero">${w.image?`<img class="cover-img" src="${src(w.image)}" alt="">`:''}
     ${w.portrait||S.monthPortrait?`<img class="por" src="${src(w.portrait||S.monthPortrait)}" alt="">`:''}
     <div class="t"><h2 class="disp fitbox">${esc(words)}</h2>${w.subtitle?`<p class="sub">${esc(w.subtitle)}</p>`:''}</div></section>
-  <section class="body2 fill"><div class="read cols3 fill" data-fit="6.8,11" data-cut="month" id="monthText">${blocks(w.blocks)}${w.signature?`<p class="sig">${esc(w.signature)}</p>`:''}</div></section>`,'p2');
+  <section class="body2 fill"><div class="read cols3 fill" data-fit="6.8,9.5" data-cut="month" id="monthText">${blocks(w.blocks)}${w.signature?`<p class="sig">${esc(w.signature)}</p>`:''}</div></section>`,'p2');
 }
 function p3(){
   const h=I.hymn,s=I.study,g=I.greaterWorks,c=I.covenant;
@@ -399,7 +402,9 @@ function layout(){
   document.querySelectorAll('.p2 .fitbox').forEach(el=>fitHead(el,26,13,mm(70)));
   document.querySelectorAll('.fitq').forEach(el=>fitHead(el,8.6,6.6,mm(26)));
   document.querySelectorAll('.fitq2').forEach(el=>fitHead(el,8.6,6.2,mm(22)));
-  document.querySelectorAll('.fitc').forEach(el=>fitHead(el,13,7.5,mm(24)));
+  /* covenant: shrink the words until the whole box content fits inside the box */
+  document.querySelectorAll('.fitc').forEach(el=>{const box=el.parentElement;
+    for(let f=13;f>=5.5;f-=.25){el.style.fontSize=f+'pt';if(box.scrollHeight<=box.clientHeight+1&&box.scrollWidth<=box.clientWidth+1)break}});
   const st=document.getElementById('study');
   if(st&&I.study){
     const note=(P.studyNote||'Continue in the GOBC&H 2026 main manual').replace('{year}',D(I.date).getFullYear());
