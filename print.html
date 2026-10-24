@@ -64,12 +64,15 @@ img{display:block}
 .read li{margin-bottom:.15em}
 .read .scripture{font-style:italic;margin:0 0 .6em;padding-left:.8em;border-left:.6mm solid var(--accent)}
 .read .scripture cite{display:block;font-style:normal;font-family:var(--ui);font-weight:700;font-size:.82em;margin-top:.2em;color:var(--muted)}
-.read .callout{font-family:var(--ui);font-weight:800;text-transform:uppercase;font-size:.95em;letter-spacing:.02em;line-height:1.3;text-align:left}
+.read .callout{break-inside:avoid;font-family:var(--ui);font-weight:800;text-transform:uppercase;font-size:.95em;letter-spacing:.02em;line-height:1.3;text-align:left}
 .read .lead::first-letter{font-family:var(--caps);font-weight:700;float:left;font-size:3.6em;line-height:.82;padding:.06em .08em 0 0;color:var(--ink)}
 .read .sig{white-space:pre-line;text-align:left;margin-top:.6em}
 .cols2{column-count:2;column-gap:5mm;column-fill:auto}
 .cols3{column-count:3;column-gap:5mm;column-fill:auto}
 .fill{flex:1 1 auto;min-height:0;overflow:hidden}
+.hl{break-inside:avoid;background:var(--accent);color:var(--on-accent);display:flex;flex-direction:column;justify-content:center;gap:2mm;padding:4mm 4.5mm;margin-top:1mm;overflow:hidden;text-align:left}
+.hl small{font-family:var(--ui);font-weight:800;font-size:6.5pt;letter-spacing:.16em;text-transform:uppercase;opacity:.8}
+.hl b{font-family:var(--display);font-weight:400;text-transform:uppercase;line-height:1.2;font-size:13pt}
 .more-note{font-style:italic;font-weight:400;color:var(--accent-ink);text-align:left;break-inside:avoid}
 
 /* ---------- page 1: cover ---------- */
@@ -97,7 +100,8 @@ img{display:block}
 .heart{flex:1;min-width:0;display:flex;flex-direction:column;padding:3.5mm var(--pad) calc(2mm + var(--xs))}
 .heart .k{font-family:var(--display);font-size:13.5pt;text-transform:uppercase}
 .heart .ttl{font-family:var(--display);font-size:7.6pt;margin:1.2mm 0 2.5mm;color:var(--accent-ink);line-height:1.25}
-.heart .read{font-size:8.2pt}
+.heart .read{font-size:8.2pt;orphans:1;widows:1}
+#monthText{orphans:1;widows:1}
 .quote{flex:none;display:flex;align-items:flex-end;gap:3mm;margin-top:2mm;border-top:.4mm solid var(--accent);padding-top:2mm}
 .quote img{height:27mm;width:auto;flex:none}
 .quote p{font-family:var(--display);font-size:8.6pt;line-height:1.35;padding-bottom:2mm}
@@ -258,7 +262,7 @@ function p1(){
   return page(`
   <header class="mast"><img src="${src(S.logo)}" alt="">
     <div class="t"><b>${esc(S.church)}</b><span>${esc(S.churchFull)}</span><em>${esc(longDate(I.date))}</em></div></header>
-  <section class="hero">${svc.background?`<img class="cover-img" src="${src(svc.background)}" alt="">`:''}
+  <section class="hero">${svc.background?`<img class="cover-img" id="coverImg" src="${src(svc.background)}" alt="">`:''}
     ${h?`<div class="honour"><span class="m">${esc(MONTHS[D(I.date).getMonth()])}</span><span class="h">${esc(h.title)}</span>
       ${h.series?`<span class="s">${esc(h.series)}</span>`:''}
       <ul>${(h.sundays||[]).map(d=>{const x=D(d);return `<li class="${near(d)?'on':''}">${MON[x.getMonth()]} ${x.getDate()}</li>`}).join('')}</ul></div>`:''}
@@ -268,7 +272,7 @@ function p1(){
   </section>
   <div class="body1">
     <section class="heart"><h2 class="k">From the Father's Heart</h2>${fh.title?`<p class="ttl">${esc(fh.title)}</p>`:''}
-      <div class="read cols2 fill" data-fit="6.6,9">${fh.salutation?`<p>${esc(fh.salutation)}</p>`:''}${(fh.paragraphs||[]).map(p=>`<p>${esc(p)}</p>`).join('')}
+      <div class="read cols2 fill" data-fit="6.6,14">${fh.salutation?`<p>${esc(fh.salutation)}</p>`:''}${(fh.paragraphs||[]).map(p=>`<p>${esc(p)}</p>`).join('')}
         ${fh.closing?`<p>${esc(fh.closing)}</p>`:''}${fh.signature?`<p class="sig">${esc(fh.signature)}</p>`:''}</div>
       ${fh.quote?`<div class="quote">${S.quotePortrait?`<img src="${src(S.quotePortrait)}" alt="">`:''}<p class="fitq">${esc(fh.quote)}</p></div>`:''}
     </section>
@@ -287,7 +291,7 @@ function p2(){
   <section class="month-hero">${w.image?`<img class="cover-img" src="${src(w.image)}" alt="">`:''}
     ${w.portrait||S.monthPortrait?`<img class="por" src="${src(w.portrait||S.monthPortrait)}" alt="">`:''}
     <div class="t"><h2 class="disp fitbox">${esc(words)}</h2>${w.subtitle?`<p class="sub">${esc(w.subtitle)}</p>`:''}</div></section>
-  <section class="body2 fill"><div class="read cols3 fill" data-fit="6.8,9.4" data-cut="month">${blocks(w.blocks)}${w.signature?`<p class="sig">${esc(w.signature)}</p>`:''}</div></section>`,'p2');
+  <section class="body2 fill"><div class="read cols3 fill" data-fit="6.8,11" data-cut="month" id="monthText">${blocks(w.blocks)}${w.signature?`<p class="sig">${esc(w.signature)}</p>`:''}</div></section>`,'p2');
 }
 function p3(){
   const h=I.hymn,s=I.study,g=I.greaterWorks,c=I.covenant;
@@ -345,7 +349,7 @@ const over=el=>el.scrollHeight>el.clientHeight+1||el.scrollWidth>el.clientWidth+
 /* largest font size (pt) between lo and hi at which the box does not overflow */
 function fit(el,lo,hi){
   el.style.fontSize=hi+'pt';if(!over(el))return true;
-  let a=lo,b=hi;for(let i=0;i<9;i++){const m=(a+b)/2;el.style.fontSize=m+'pt';if(over(el))b=m;else a=m}
+  let a=lo,b=hi;for(let i=0;i<12;i++){const m=(a+b)/2;el.style.fontSize=m+'pt';if(over(el))b=m;else a=m}
   el.style.fontSize=a+'pt';return !over(el);
 }
 /* single headline: shrink until it fits its parent (max lines) */
@@ -402,7 +406,43 @@ function layout(){
     fillCut(st,I.study.blocks||[],note);
   }
   document.querySelectorAll('[data-fit]').forEach(fitOrCut);
+  /* stretch line spacing slightly so Father's Heart reaches the bottom of its second column */
+  document.querySelectorAll('.heart .read').forEach(el=>stretch(el,1.36,1.62));
+  const mt=document.getElementById('monthText');if(mt)monthHighlight(mt);
 }
+function stretch(el,lo,hi){if(over(el))return;let a=lo,b=hi;el.style.lineHeight=hi;if(!over(el))return;
+  for(let i=0;i<10;i++){const m=(a+b)/2;el.style.lineHeight=m;if(over(el))b=m;else a=m}el.style.lineHeight=a}
+/* God's Word: fill whatever is left at the end of the last column with a highlighted line */
+function monthHighlight(el){
+  const w=M.word,pick=(w.blocks||[]).find(b=>b.callout);
+  const text=pick?pick.callout:(w.subtitle||w.title);if(!text)return;
+  const mark=document.createElement('div');mark.style.height='0';el.appendChild(mark);
+  const room=el.getBoundingClientRect().bottom-mark.getBoundingClientRect().bottom;mark.remove();
+  if(room<mm(14))return;
+  const hl=document.createElement('div');hl.className='hl';
+  hl.innerHTML=`<small>God's Word for ${esc(MONTHS[D(I.date).getMonth()])}</small><b>${esc(text)}</b>`;
+  el.appendChild(hl);
+  let h=room-mm(1.5);hl.style.height=h+'px';
+  while(over(el)&&h>mm(12)){h-=2;hl.style.height=h+'px'}
+  if(over(el)){hl.remove();return}
+  const b=hl.querySelector('b');
+  for(let f=20;f>=7;f-=.5){b.style.fontSize=f+'pt';if(hl.scrollHeight<=hl.clientHeight+1&&b.scrollWidth<=b.clientWidth+1)break}
+}
+/* weekly accent picked from the cover image when none is given (same method as the website) */
+function accentFromImage(img){
+  try{if(!img||!img.naturalWidth)return null;
+    const c=document.createElement('canvas'),w=60,h=Math.max(1,Math.round(60*img.naturalHeight/img.naturalWidth));c.width=w;c.height=h;
+    const x=c.getContext('2d');x.drawImage(img,0,0,w,h);const d=x.getImageData(0,0,w,h).data,bins={};
+    for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);if(mx<90||mx-mn<60)continue;
+      const [hh]=hexToHsl('#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''));const k=Math.round(hh/15);(bins[k]=bins[k]||[]).push([r,g,b])}
+    const best=Object.values(bins).sort((a,b)=>b.length-a.length)[0];if(!best||best.length<20)return null;
+    const avg=[0,1,2].map(j=>Math.round(best.reduce((s,p)=>s+p[j],0)/best.length));
+    let [hh,ss,ll]=hexToHsl('#'+avg.map(v=>v.toString(16).padStart(2,'0')).join(''));ll=Math.min(Math.max(ll,45),62);ss=Math.max(ss,55);
+    return hslHex(hh,ss,ll);
+  }catch(e){return null}
+}
+function hslHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return '#'+[f(0),f(8),f(4)].map(v=>Math.round(v*255).toString(16).padStart(2,'0')).join('')}
 
 function build(data){
   S=data.site;I=data.issue;M=data.month||null;P=Object.assign({mode:'home'},S.print||{});
@@ -416,7 +456,8 @@ function build(data){
   const imgs=[...document.images];
   Promise.all([document.fonts.ready,...imgs.map(im=>im.complete?1:new Promise(r=>{im.onload=im.onerror=r}))])
   .then(()=>new Promise(r=>setTimeout(r,150)))
-  .then(()=>{layout();window.PEP_PRINT_READY=true;document.body.dataset.ready='1';
+  .then(()=>{if(!I.accent){const a=accentFromImage(document.getElementById('coverImg'));if(a)applyAccent(a)}
+    layout();window.PEP_PRINT_READY=true;document.body.dataset.ready='1';
     if(qs.get('auto')==='1')setTimeout(()=>window.print(),500)});
 }
 
