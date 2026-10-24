@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PEP Magazine - Print edition</title>
+<link rel="icon" href="assets/fixed/logo.webp">
+<link rel="stylesheet" href="assets/fonts/print-fonts.css">
+<style id="pageSize">@page{size:210mm 297mm;margin:0}</style>
+<style>
+/* PEP Magazine: dedicated 5-page A4 print edition.
+   Print mode lives in data/site.json -> "print": {"mode": "home" | "shop"}.
+   home = A4 with a white safety edge (home and office printers cannot print to the paper edge).
+   shop = 216 x 303 mm page with 3 mm bleed on every side (no crop marks), trimmed to A4 by the print shop.
+          Text keeps at least 6 mm from the bleed edge.
+   Add ?mode=shop or ?mode=home to the address to override for one print. */
+:root{
+  --accent:#fec91b; --accent-ink:#7a5c00; --on-accent:#1a1406;
+  --ink:#16161a; --muted:#5d5d64; --paper:#ffffff; --panel:#f1f0ec; --dark:#141417; --line:#d9d7d0;
+  --display:"Krona One","Arial Black",sans-serif;
+  --caps:"Cinzel","Trajan Pro",Georgia,serif;
+  --read:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --ui:"Manrope","Segoe UI",Arial,sans-serif;
+  /* page geometry (home printer defaults; shop mode overrides) */
+  --pw:210mm; --ph:297mm;
+  --edge:6mm;     /* white unprinted margin around the design */
+  --pad:4.5mm;    /* text distance from the design edge */
+  --xs:0mm;       /* extra safe distance in shop mode (3 mm bleed + 3 mm trim tolerance) */
+}
+.mode-shop{--pw:216mm;--ph:303mm;--edge:0mm;--xs:6mm;--pad:10.5mm}
+*{box-sizing:border-box}
+html,body{margin:0;background:#8d8d92}
+body{font-family:var(--ui);color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1,h2,h3,p,ul,ol,figure,blockquote{margin:0}
+img{display:block}
+.cover-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+/* ---------- screen toolbar ---------- */
+.tools{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:center;
+  padding:12px 16px;background:#1b1b1f;color:#fff;font-size:14px}
+.tools button{font:inherit;font-weight:800;border:0;border-radius:999px;padding:10px 18px;background:var(--accent);color:var(--on-accent);cursor:pointer}
+.tools span{opacity:.85;max-width:620px}
+.status{color:#fff;text-align:center;padding:40px 16px;font-size:16px}
+@media print{.tools{display:none}html,body{background:#fff}}
+
+/* ---------- pages ---------- */
+.pages{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 0 40px}
+.page{width:var(--pw);height:var(--ph);background:var(--paper);position:relative;overflow:hidden;flex:none;
+  box-shadow:0 6px 30px rgba(0,0,0,.35);break-after:page;page-break-after:always}
+.page:last-child{break-after:auto;page-break-after:auto}
+@media print{.pages{display:block;padding:0}.page{box-shadow:none;margin:0}}
+@media screen and (max-width:820px){.pages{zoom:.45}}
+.frame{position:absolute;inset:var(--edge);display:flex;flex-direction:column;overflow:hidden}
+
+/* shared type */
+.disp{font-family:var(--display);text-transform:uppercase;letter-spacing:.01em;line-height:1.05}
+.caps{font-family:var(--caps);font-weight:700;line-height:1.02}
+.eyebrow{font-family:var(--ui);font-weight:800;text-transform:uppercase;letter-spacing:.14em;font-size:6.5pt}
+.read{font-family:var(--read);font-size:8.4pt;line-height:1.36;color:var(--ink);text-align:justify;hyphens:auto;-webkit-hyphens:auto}
+.read p{margin:0 0 .55em}
+.read h3{font-family:var(--ui);font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:.92em;margin:.75em 0 .3em;color:var(--accent-ink);break-after:avoid;text-align:left}
+.read h3:first-child{margin-top:0}
+.read ol,.read ul{margin:0 0 .55em;padding-left:1.3em}
+.read li{margin-bottom:.15em}
+.read .scripture{font-style:italic;margin:0 0 .6em;padding-left:.8em;border-left:.6mm solid var(--accent)}
+.read .scripture cite{display:block;font-style:normal;font-family:var(--ui);font-weight:700;font-size:.82em;margin-top:.2em;color:var(--muted)}
+.read .callout{font-family:var(--ui);font-weight:800;text-transform:uppercase;font-size:.95em;letter-spacing:.02em;line-height:1.3;text-align:left}
+.read .lead::first-letter{font-family:var(--caps);font-weight:700;float:left;font-size:3.6em;line-height:.82;padding:.06em .08em 0 0;color:var(--ink)}
+.read .sig{white-space:pre-line;text-align:left;margin-top:.6em}
+.cols2{column-count:2;column-gap:5mm;column-fill:auto}
+.cols3{column-count:3;column-gap:5mm;column-fill:auto}
+.fill{flex:1 1 auto;min-height:0;overflow:hidden}
+.more-note{font-style:italic;font-weight:400;color:var(--accent-ink);text-align:left;break-inside:avoid}
+
+/* ---------- page 1: cover ---------- */
+.mast{display:flex;align-items:center;gap:4mm;padding:calc(2.5mm + var(--xs)) var(--pad) 2.5mm;flex:none}
+.mast img{height:17mm;width:auto}
+.mast .t{margin-left:auto;text-align:right}
+.mast .t b{display:block;font-family:var(--display);font-weight:400;font-size:19pt;letter-spacing:.02em;line-height:1;text-transform:uppercase}
+.mast .t span{display:block;font-family:var(--display);font-size:7.2pt;margin-top:1.4mm;letter-spacing:.04em;text-transform:uppercase}
+.mast .t em{display:block;font-style:normal;font-family:var(--ui);font-weight:800;font-size:7pt;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);margin-top:1.6mm}
+.hero{position:relative;height:76mm;flex:none;display:flex;overflow:hidden;background:var(--accent)}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.15),rgba(0,0,0,0) 45%)}
+.honour{position:relative;z-index:2;width:calc(44mm + var(--xs));flex:none;background:rgba(10,10,12,.82);color:#fff;padding:4mm 3.5mm 4mm calc(3.5mm + var(--xs));display:flex;flex-direction:column;gap:1.4mm}
+.honour .m{font-family:var(--display);color:var(--accent);font-size:9pt;text-transform:uppercase}
+.honour .h{font-family:var(--display);font-size:8.4pt;line-height:1.15;text-transform:uppercase}
+.honour .s{font-family:var(--ui);font-weight:800;font-size:7pt;text-transform:uppercase;letter-spacing:.06em;line-height:1.2;opacity:.9}
+.honour ul{list-style:none;padding:0;margin-top:auto;display:flex;flex-direction:column;gap:.9mm}
+.honour li{font-family:var(--display);font-size:8.5pt;padding:.8mm 2mm;color:rgba(255,255,255,.75)}
+.honour li.on{background:var(--accent);color:var(--on-accent);font-size:11pt}
+.svc{position:relative;z-index:2;flex:1;padding:5mm 5mm 0 6mm;display:flex;flex-direction:column}
+.svc .caps{font-size:30pt;color:#fff;text-shadow:0 .6mm 2mm rgba(0,0,0,.45);max-width:88mm;text-transform:uppercase;letter-spacing:.01em}
+.svc .date{font-family:var(--ui);font-weight:800;font-size:8pt;letter-spacing:.14em;text-transform:uppercase;color:#fff;margin-top:2.5mm;text-shadow:0 .3mm 1mm rgba(0,0,0,.5)}
+.svc .pastors{position:absolute;right:0;bottom:0;height:62mm;width:auto;z-index:1}
+.svc .names{position:absolute;left:6mm;bottom:4mm;z-index:2;font-family:var(--display);font-size:7.2pt;line-height:1.25;color:#fff;background:rgba(10,10,12,.78);padding:1.6mm 2.4mm}
+.body1{flex:1;min-height:0;display:flex}
+.heart{flex:1;min-width:0;display:flex;flex-direction:column;padding:3.5mm var(--pad) calc(2mm + var(--xs))}
+.heart .k{font-family:var(--display);font-size:13.5pt;text-transform:uppercase}
+.heart .ttl{font-family:var(--display);font-size:7.6pt;margin:1.2mm 0 2.5mm;color:var(--accent-ink);line-height:1.25}
+.heart .read{font-size:8.2pt}
+.quote{flex:none;display:flex;align-items:flex-end;gap:3mm;margin-top:2mm;border-top:.4mm solid var(--accent);padding-top:2mm}
+.quote img{height:27mm;width:auto;flex:none}
+.quote p{font-family:var(--display);font-size:8.6pt;line-height:1.35;padding-bottom:2mm}
+.rail{width:calc(45mm + var(--xs));flex:none;background:var(--panel);padding:3.5mm calc(3.5mm + var(--xs)) calc(3mm + var(--xs)) 3.5mm;display:flex;flex-direction:column;gap:2.4mm;text-align:center;overflow:hidden}
+.rail .lab{font-family:var(--caps);font-size:10pt;line-height:1.05}
+.rail img.mw{width:100%;height:auto;max-height:30mm;object-fit:contain}
+.rail img.bk{height:34mm;width:auto;margin:0 auto;box-shadow:0 .6mm 1.6mm rgba(0,0,0,.25)}
+.rail .tt{font-family:var(--display);font-size:7.6pt;line-height:1.2}
+.rail .tt.sm{font-size:6.4pt}
+.rail .order{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:1.2mm;font-size:6.4pt;font-weight:700;line-height:1.3}
+.rail .order img{width:20mm;height:20mm}
+.rail .order b{font-family:var(--display);font-weight:400;font-size:7pt}
+.rail .order .u{color:var(--accent-ink);font-weight:800}
+
+/* ---------- page 2: God's Word for the Month ---------- */
+.band{flex:none;background:var(--panel);padding:calc(3mm + var(--xs)) var(--pad) 3mm;text-align:center}
+.band .disp{font-size:15pt}
+.month-hero{position:relative;height:96mm;flex:none;background:#000;overflow:hidden;color:#fff}
+.month-hero .cover-img{opacity:.75}
+.month-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(0,0,0,.05) 35%,rgba(0,0,0,.65) 70%)}
+.month-hero .por{position:absolute;left:calc(4mm + var(--xs));bottom:0;height:92mm;width:auto;z-index:2}
+.month-hero .t{position:absolute;right:var(--pad);top:7mm;bottom:6mm;width:108mm;z-index:2;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;text-align:right}
+.month-hero .t .disp{font-size:24pt;line-height:1.08}
+.month-hero .t .sub{font-family:var(--ui);font-weight:800;font-size:8pt;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-top:3mm}
+.body2{display:flex;flex-direction:column;padding:4mm var(--pad) calc(3mm + var(--xs))}
+
+/* ---------- page 3: Hymn, PEP Studies, Greater Works, Covenant ---------- */
+.hymn{flex:none;display:flex;align-items:stretch;height:calc(20mm + var(--xs));background:var(--panel)}
+.hymn img{width:calc(30mm + var(--xs));height:100%;object-fit:cover;flex:none}
+.hymn div{flex:1;display:flex;flex-direction:column;justify-content:center;padding:var(--xs) var(--pad) 0;text-align:center}
+.hymn .caps{font-size:14pt}
+.hymn p{font-family:var(--read);font-size:9pt;margin-top:1mm}
+.study-hero{position:relative;height:36mm;flex:none;overflow:hidden;background:var(--dark);color:#fff}
+.study-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.7),rgba(0,0,0,.25))}
+.study-hero .in{position:absolute;inset:0;z-index:2;padding:3.5mm var(--pad);display:flex;flex-direction:column;justify-content:center}
+.study-hero .caps.e{font-size:9.5pt;letter-spacing:.06em;color:var(--accent)}
+.study-hero .row{display:flex;align-items:center;gap:3.5mm;margin-top:5mm}
+.study-hero .no{width:13mm;height:13mm;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;flex:none;font-family:var(--display);font-size:11pt;position:relative}
+.study-hero .no::before{content:"STUDY";position:absolute;top:-3.2mm;font-family:var(--ui);font-weight:800;font-size:5.4pt;letter-spacing:.14em;color:#fff}
+.study-hero .caps.t{font-size:21pt;text-transform:uppercase;text-shadow:0 .5mm 2mm rgba(0,0,0,.5)}
+.body3{padding:3.5mm var(--pad) 3mm;display:flex;flex-direction:column}
+.duo{flex:none;display:flex;gap:0;height:calc(46mm + var(--xs))}
+.gw{position:relative;flex:2.1;overflow:hidden;background:var(--dark);color:#fff}
+.gw::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.2),rgba(0,0,0,.72) 45%)}
+.gw .in{position:absolute;inset:0;z-index:2;padding:3.5mm 5mm calc(3.5mm + var(--xs)) calc(5mm + var(--xs));display:flex;flex-direction:column;align-items:flex-end;justify-content:center;text-align:right}
+.gw .disp.k{font-size:16pt;line-height:.95}
+.gw .disp.k small{display:block;font-size:6.6pt;letter-spacing:.3em;margin-top:.8mm}
+.gw .ref{font-family:var(--display);font-size:8.4pt;margin-top:2.5mm}
+.gw .q{font-family:var(--display);font-size:8.6pt;line-height:1.3;color:var(--accent);margin-top:1.6mm;max-width:118mm;text-align:right}
+.cov{position:relative;flex:1;overflow:hidden;background:var(--dark);color:#fff}
+.cov::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.2) 50%,rgba(0,0,0,.65))}
+.cov .in{position:absolute;inset:0;z-index:2;padding:3.5mm calc(4mm + var(--xs)) calc(3.5mm + var(--xs)) 4mm;display:flex;flex-direction:column}
+.cov .k{font-family:var(--caps);font-size:11pt;line-height:1}
+.cov .k small{display:block;font-size:6.5pt;letter-spacing:.12em;margin-top:.6mm}
+.cov .big{font-family:var(--display);font-size:13pt;line-height:1.08;margin:auto 0;text-transform:uppercase}
+.cov .line{font-family:var(--read);font-style:italic;font-size:7.6pt;text-align:right}
+
+/* ---------- page 4: Bible in a Year, Vocabulary, Prophetic Words, Testimony ---------- */
+.body4{flex:1;min-height:0;display:flex}
+.biy{width:calc(44mm + var(--xs));flex:none;background:var(--panel);padding:calc(4mm + var(--xs)) 3.5mm calc(4mm + var(--xs)) calc(3.5mm + var(--xs));display:flex;flex-direction:column;gap:2.2mm;overflow:hidden}
+.biy img{width:20mm;height:auto;margin:0 auto}
+.biy .caps{font-size:13pt;text-align:center;margin-bottom:1mm}
+.day{background:#fff;border-radius:2.4mm;padding:1.6mm 2.6mm;box-shadow:0 .3mm 1.2mm rgba(0,0,0,.12)}
+.day .d{display:flex;align-items:baseline;gap:1.6mm;font-family:var(--display)}
+.day .d small{font-size:6.6pt}
+.day .d b{font-weight:400;font-size:14pt;color:var(--accent-ink)}
+.day .d i{font-style:normal;font-family:var(--ui);font-weight:700;font-size:6.2pt;color:var(--muted);margin-left:auto;text-transform:uppercase;letter-spacing:.08em}
+.day p{font-family:var(--read);font-size:7.6pt;line-height:1.25}
+.right4{flex:1;min-width:0;display:flex;flex-direction:column}
+.vocab{flex:none;background:var(--dark);color:#fff;padding:calc(4mm + var(--xs)) var(--pad) 3.5mm 5mm;display:flex;flex-direction:column;gap:2mm;max-height:112mm}
+.vocab .caps{font-size:16pt;color:#fff}
+.vocab .v{font-family:var(--read);font-size:8.4pt;line-height:1.3}
+.vocab .v b{color:var(--accent);font-family:var(--ui);font-weight:800;margin-right:1.4mm}
+.vocab .list{background:#fff;color:var(--ink);padding:3mm 4mm;overflow:hidden;flex:1;min-height:0}
+.vocab ul{margin:0;padding-left:1.1em;font-family:var(--read);font-size:8.2pt;line-height:1.3}
+.vocab li::marker{color:var(--accent-ink)}
+.pw{flex:none;padding:4mm 5mm 1mm;text-align:center}
+.pw .caps{font-size:13pt}
+.pw .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.8mm 2.4mm;margin-top:2.6mm}
+.pw .grid div{border:.35mm solid var(--ink);border-radius:1.6mm;padding:1.8mm 2mm;font-family:var(--display);font-size:7.2pt;line-height:1.2;display:grid;place-items:center;min-height:9mm;text-transform:uppercase}
+.testi{flex:1;min-height:0;display:flex;flex-direction:column;margin:3mm var(--pad) calc(3mm + var(--xs)) 5mm;border:.35mm solid var(--ink);padding:3.5mm 4.5mm 3mm}
+.testi .caps{font-size:14pt;text-align:center;flex:none}
+.testi .op{font-family:var(--read);font-style:italic;font-weight:400;text-align:center;font-size:9pt;margin:1.4mm 0 2mm;flex:none}
+.testi .read{font-size:8.6pt}
+
+/* ---------- page 5: releases, programmes, media, locations ---------- */
+.top5{flex:none;display:flex;gap:4mm;padding:calc(4mm + var(--xs)) var(--pad) 3mm}
+.rel{flex:1.45;min-width:0;display:flex;flex-direction:column;gap:2.4mm}
+.rel .caps{font-size:17pt}
+.rel .row{display:flex;align-items:flex-end;gap:3mm}
+.rel .row img.b{height:32mm;width:auto;box-shadow:0 .6mm 1.8mm rgba(0,0,0,.25);flex:none;max-width:24mm;object-fit:contain}
+.rel .qr{display:flex;flex-direction:column;align-items:center;gap:1mm;margin-left:auto;font-family:var(--display);font-size:6.4pt}
+.rel .qr img{width:21mm;height:21mm}
+.rel .ord{font-size:7pt;font-weight:700;line-height:1.35}
+.rel .ord b{color:var(--accent-ink)}
+.prog{flex:1;min-width:0;display:flex;flex-direction:column;gap:2.4mm;text-align:center}
+.prog .caps{font-size:14pt}
+.prog .card{background:var(--dark);color:#fff;border-radius:3mm;padding:3.5mm 3mm}
+.prog .card b{display:block;font-family:var(--ui);font-weight:800;font-size:9.6pt;line-height:1.2;color:var(--accent);text-transform:uppercase}
+.prog .card span{display:block;font-family:var(--display);font-size:7.2pt;margin-top:1.6mm}
+.info{padding:0 var(--pad) 2.5mm;font-size:6.2pt}
+.info h2{font-family:var(--caps);font-size:1.75em;text-align:center;margin:0 0 1.4mm}
+table.media{width:100%;border-collapse:collapse;font-size:1em;line-height:1.22;margin-bottom:3mm}
+table.media th{background:var(--accent);color:var(--on-accent);text-align:left;font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:.88em;padding:.9mm 1.4mm}
+table.media td{padding:.7mm 1.4mm;border-bottom:.2mm solid var(--line);vertical-align:top}
+table.media td:first-child{font-weight:800;white-space:nowrap}
+table.media tr:nth-child(even) td{background:#f7f6f3}
+.locs{column-count:4;column-gap:4mm;line-height:1.28}
+.locs h3{font-family:var(--ui);font-weight:800;font-size:1.04em;text-transform:uppercase;letter-spacing:.04em;margin:0 0 .6mm;color:var(--accent-ink);break-after:avoid}
+.locs ol{margin:0 0 2mm;padding-left:1.25em}
+.locs li{break-inside:avoid;margin-bottom:.35mm}
+.web{flex:none;background:var(--accent);color:var(--on-accent);text-align:center;padding:3mm 3mm calc(3mm + var(--xs));font-family:var(--display);font-size:14pt;letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div class="tools" id="tools"><button type="button" id="printBtn">Print or save as PDF</button>
+<span>Paper: A4. Margins: Default. Scale: 100%. Tick "Background graphics" if your browser shows it. Choose "Save as PDF" as the printer to keep a copy.</span></div>
+<div class="pages" id="pages"><p class="status">Preparing the print edition...</p></div>
+
+<script>
+(function(){
+'use strict';
+const qs=new URLSearchParams(location.search);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const src=p=>(window.PEP_ASSETS&&window.PEP_ASSETS[p])||p||'';
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON=MONTHS.map(m=>m.slice(0,3).toUpperCase());
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const D=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const ord=n=>n+(['th','st','nd','rd'][(n%100-20)%10]||['th','st','nd','rd'][n%100]||'th');
+const longDate=s=>{const d=D(s);return `Sunday ${ord(d.getDate())} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`};
+let S,I,M,P;
+
+/* accent: same maths as the website so print and web match */
+function hexToHsl(h){h=h.replace('#','');const r=parseInt(h.slice(0,2),16)/255,g=parseInt(h.slice(2,4),16)/255,b=parseInt(h.slice(4,6),16)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let H=0,S=0,L=(mx+mn)/2;if(mx!==mn){const d=mx-mn;S=L>.5?d/(2-mx-mn):d/(mx+mn);
+  H=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;H*=60}return [H,S*100,L*100]}
+const hsl=(h,s,l)=>`hsl(${h.toFixed(0)} ${s.toFixed(0)}% ${l.toFixed(0)}%)`;
+function lum(h){h=h.replace('#','');return [0,2,4].map(i=>{let c=parseInt(h.slice(i,i+2),16)/255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)}).reduce((a,c,i)=>a+c*[.2126,.7152,.0722][i],0)}
+function applyAccent(hex){const [h,s]=hexToHsl(hex);const r=document.documentElement.style;
+  r.setProperty('--accent',hex);r.setProperty('--accent-ink',hsl(h,Math.min(s,85),28));
+  r.setProperty('--on-accent',lum(hex)>.4?hsl(h,40,10):'#ffffff')}
+
+function blocks(list){return (list||[]).map(b=>{
+  if(b.lead)return `<p class="lead">${esc(b.lead)}</p>`;
+  if(b.p)return `<p>${esc(b.p)}</p>`;
+  if(b.h)return `<h3>${esc(b.h)}</h3>`;
+  if(b.list)return `<ol>${b.list.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`;
+  if(b.scripture)return `<blockquote class="scripture">${esc(b.scripture)}<cite>${esc(b.ref)}</cite></blockquote>`;
+  if(b.callout)return `<p class="callout">${esc(b.callout)}</p>`;
+  return ''}).join('')}
+const page=(inner,cls)=>`<section class="page ${cls||''}"><div class="frame">${inner}</div></section>`;
+
+/* ---------- page builders ---------- */
+function p1(){
+  const h=M&&M.honour,svc=I.service||{},fh=I.fathersHeart||{},mw=I.messageForWeek,bk=I.bookForWeek,o=S.orders||{};
+  const near=d=>Math.abs(D(d)-D(I.date))<=86400000*1.5;
+  return page(`
+  <header class="mast"><img src="${src(S.logo)}" alt="">
+    <div class="t"><b>${esc(S.church)}</b><span>${esc(S.churchFull)}</span><em>${esc(longDate(I.date))}</em></div></header>
+  <section class="hero">${svc.background?`<img class="cover-img" src="${src(svc.background)}" alt="">`:''}
+    ${h?`<div class="honour"><span class="m">${esc(MONTHS[D(I.date).getMonth()])}</span><span class="h">${esc(h.title)}</span>
+      ${h.series?`<span class="s">${esc(h.series)}</span>`:''}
+      <ul>${(h.sundays||[]).map(d=>{const x=D(d);return `<li class="${near(d)?'on':''}">${MON[x.getMonth()]} ${x.getDate()}</li>`}).join('')}</ul></div>`:''}
+    <div class="svc"><h1 class="caps fitline">${esc(svc.title||'Sunday Service')}</h1>
+      <img class="pastors" src="${src(S.pastorsImage)}" alt="">
+      <span class="names">${esc(S.pastors||'').replace(/^Reverend\s*/i,'Reverend<br>').replace(/\s*\+\s*/,'+')}</span></div>
+  </section>
+  <div class="body1">
+    <section class="heart"><h2 class="k">From the Father's Heart</h2>${fh.title?`<p class="ttl">${esc(fh.title)}</p>`:''}
+      <div class="read cols2 fill" data-fit="6.6,9">${fh.salutation?`<p>${esc(fh.salutation)}</p>`:''}${(fh.paragraphs||[]).map(p=>`<p>${esc(p)}</p>`).join('')}
+        ${fh.closing?`<p>${esc(fh.closing)}</p>`:''}${fh.signature?`<p class="sig">${esc(fh.signature)}</p>`:''}</div>
+      ${fh.quote?`<div class="quote">${S.quotePortrait?`<img src="${src(S.quotePortrait)}" alt="">`:''}<p class="fitq">${esc(fh.quote)}</p></div>`:''}
+    </section>
+    <aside class="rail">
+      ${mw?`<span class="lab">Message for the Week</span>${mw.image?`<img class="mw" src="${src(mw.image)}" alt="">`:''}<span class="tt">${esc(mw.title)}</span>`:''}
+      ${bk?`<span class="lab">Book for the Week</span>${bk.image?`<img class="bk" src="${src(bk.image)}" alt="">`:''}<span class="tt sm">${esc(bk.title)}</span>`:''}
+      <div class="order">${o.qr?`<img src="${src(o.qr)}" alt=""><b>Scan to order</b>`:''}<span>To order your copy of books and messages visit <span class="u">${esc(o.site)}</span> or call ${esc(o.phone)}</span></div>
+    </aside>
+  </div>`,'p1');
+}
+function p2(){
+  const w=M&&M.word;if(!w)return '';
+  const d=D(I.date),words=String(w.title||'').trim();
+  return page(`
+  <header class="band"><h1 class="disp">God's Word for ${esc(MONTHS[d.getMonth()])} ${d.getFullYear()}</h1></header>
+  <section class="month-hero">${w.image?`<img class="cover-img" src="${src(w.image)}" alt="">`:''}
+    ${w.portrait||S.monthPortrait?`<img class="por" src="${src(w.portrait||S.monthPortrait)}" alt="">`:''}
+    <div class="t"><h2 class="disp fitbox">${esc(words)}</h2>${w.subtitle?`<p class="sub">${esc(w.subtitle)}</p>`:''}</div></section>
+  <section class="body2 fill"><div class="read cols3 fill" data-fit="6.8,9.4" data-cut="month">${blocks(w.blocks)}${w.signature?`<p class="sig">${esc(w.signature)}</p>`:''}</div></section>`,'p2');
+}
+function p3(){
+  const h=I.hymn,s=I.study,g=I.greaterWorks,c=I.covenant;
+  return page(`
+  ${h&&h.title?`<section class="hymn">${S.hymnImage?`<img src="${src(S.hymnImage)}" alt="">`:''}<div><h2 class="caps">Hymn: ${esc(h.title)}</h2>${h.reference?`<p>${esc(h.reference)}</p>`:''}</div></section>`:''}
+  ${s?`<section class="study-hero">${s.image?`<img class="cover-img" src="${src(s.image)}" alt="">`:''}<div class="in">
+      <span class="caps e">Prophetic. Effective. Productive Studies</span>
+      <div class="row">${s.number?`<span class="no">${esc(s.number)}</span>`:''}<h1 class="caps t fitline">${esc(s.title)}</h1></div></div></section>
+    <section class="body3 fill"><div class="read cols3 fill" id="study"></div></section>`:'<div class="fill"></div>'}
+  ${g||c?`<div class="duo">
+    ${g?`<section class="gw">${g.image?`<img class="cover-img" src="${src(g.image)}" alt="">`:''}<div class="in">
+      <span class="disp k">Greater Works<small>Scripture</small></span><span class="ref">${esc(g.reference)}</span><p class="q fitq2">"${esc(g.text)}"</p></div></section>`:''}
+    ${c?`<section class="cov">${c.image?`<img class="cover-img" src="${src(c.image)}" alt="">`:''}<div class="in">
+      <span class="k">Covenant<small>in the House${c.number?' &middot; No. '+esc(c.number):''}</small></span>
+      <span class="big fitc">${esc(c.title)}</span>${c.line?`<span class="line">"${esc(c.line)}"</span>`:''}</div></section>`:''}
+  </div>`:''}`,'p3');
+}
+function p4(){
+  const v=I.vocabulary,pw=I.propheticWords||[],t=I.testimony,b=I.bibleInYear||[];
+  return page(`<div class="body4">
+  ${b.length?`<aside class="biy">${S.bibleImage?`<img src="${src(S.bibleImage)}" alt="">`:''}<h2 class="caps">Bible in a Year</h2>
+    ${b.map(d=>{const x=D(d.date);return `<div class="day"><div class="d"><small>${MON[x.getMonth()]}</small><b>${x.getDate()}</b><i>${DAYS[x.getDay()]}</i></div><p>${(d.readings||[]).map(esc).join('<br>')}</p></div>`}).join('')}</aside>`:''}
+  <div class="right4">
+    ${v&&v.items&&v.items.length?`<section class="vocab"><h2 class="caps">Anointed Vocabulary</h2>
+      ${v.verse?`<p class="v"><b>${esc(v.reference)}</b>"${esc(v.verse)}"</p>`:''}
+      <div class="list" data-fit="6.6,9"><ul>${v.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></section>`:''}
+    ${pw.length?`<section class="pw"><h2 class="caps">Prophetic Words for ${D(I.date).getFullYear()}</h2>
+      <div class="grid">${pw.map(w=>`<div>${esc(w)}</div>`).join('')}</div></section>`:''}
+    ${t?`<section class="testi"><h2 class="caps">Testimony</h2>${t.opening?`<p class="op">${esc(t.opening)}</p>`:''}
+      <div class="read fill" data-fit="6.8,10.6" data-cut="testimony">${(t.paragraphs||[]).map(p=>`<p>${esc(p)}</p>`).join('')}
+        <p class="sig">${esc([t.author,t.zone].filter(Boolean).join('\n'))}</p></div></section>`:'<div class="fill"></div>'}
+  </div></div>`,'p4');
+}
+function p5(){
+  const rel=S.newReleases||[],pr=I.programmes||[],o=S.orders||{},media=S.media||[],locs=S.locations||[];
+  return page(`
+  <div class="top5">
+    ${rel.length?`<section class="rel"><h2 class="caps">New Releases!</h2>
+      <div class="row">${rel.slice(0,4).map(b=>`<img class="b" src="${src(b.image)}" alt="">`).join('')}
+        ${o.qr?`<div class="qr"><img src="${src(o.qr)}" alt="">Scan to order</div>`:''}</div>
+      <p class="ord">To order your copy of these books please visit <b>${esc(o.site)}</b> or call ${esc(o.phone)}</p></section>`:''}
+    ${pr.length?`<section class="prog"><h2 class="caps">Upcoming Programme${pr.length>1?'s':''}</h2>
+      ${pr.slice(0,3).map(p=>`<div class="card"><b>${esc(p.title)}</b>${p.dates?`<span>${esc(p.dates)}</span>`:''}</div>`).join('')}</section>`:''}
+  </div>
+  <section class="info fill" data-fit="4.6,7.4">
+    ${media.length?`<h2>Mass Media Outreach</h2><table class="media"><thead><tr><th style="width:24%">Station</th><th style="width:19%">Programme</th><th style="width:24%">Frequency</th><th>Time of broadcast</th></tr></thead><tbody>
+      ${media.map(m=>`<tr><td>${esc(m.station)}${m.link?`<br><span style="font-weight:500">${esc(m.link)}</span>`:''}</td><td>${esc(m.programme)}</td><td>${esc(m.frequency)}</td><td>${esc(m.times)}</td></tr>`).join('')}</tbody></table>`:''}
+    ${locs.length?`<h2>Worship with us at any of these Dream Centre locations</h2><div class="locs">${locs.map(r=>`<h3>${esc(r.region)}</h3><ol>${r.places.map(p=>`<li>${esc(p)}</li>`).join('')}</ol>`).join('')}</div>`:''}
+  </section>
+  ${S.website?`<footer class="web">${esc(S.website.label)}</footer>`:''}`,'p5');
+}
+
+/* ---------- fitting ---------- */
+const over=el=>el.scrollHeight>el.clientHeight+1||el.scrollWidth>el.clientWidth+1;
+/* largest font size (pt) between lo and hi at which the box does not overflow */
+function fit(el,lo,hi){
+  el.style.fontSize=hi+'pt';if(!over(el))return true;
+  let a=lo,b=hi;for(let i=0;i<9;i++){const m=(a+b)/2;el.style.fontSize=m+'pt';if(over(el))b=m;else a=m}
+  el.style.fontSize=a+'pt';return !over(el);
+}
+/* single headline: shrink until it fits its parent (max lines) */
+function fitHead(el,hi,lo,maxH){el.style.fontSize=hi+'pt';
+  for(let f=hi;f>=lo;f-=.5){el.style.fontSize=f+'pt';if(el.scrollWidth<=el.clientWidth+1&&el.getBoundingClientRect().height<=maxH)return}}
+const mm=v=>v*96/25.4;
+const words=s=>s.split(/\s+/).filter(Boolean);
+const cutText=(s,n)=>words(s).slice(0,n).join(' ').replace(/[,;:\-]+$/,'')+'...';
+
+/* Fill a fixed box with blocks in order. If they do not all fit, stop at the last
+   whole sentence or word that fits and add the note. Used for PEP Studies (fixed size, no shrinking). */
+function fillCut(el,list,note,tail){
+  const html=(n,part)=>blocks(list.slice(0,n))+(part||'')+(n<list.length||part?`<p class="more-note">${esc(note)}</p>`:'')+(tail||'');
+  el.innerHTML=html(list.length);if(!over(el))return false;
+  let n=list.length;
+  while(n>0){el.innerHTML=html(n-1,'');if(!over(el))break;n--}
+  n=Math.max(0,n-1);                                  /* blocks[0..n) fit whole */
+  const b=list[n];let best='';
+  const tryPart=h=>{el.innerHTML=html(n,h);return !over(el)};
+  if(b&&(b.p||b.lead||b.callout||b.scripture)){
+    const key=b.p?'p':b.lead?'lead':b.callout?'callout':'scripture',w=words(b[key]);
+    let lo=0,hi=w.length;while(lo<hi){const m=Math.ceil((lo+hi)/2);const part=blocks([Object.assign({},b,{[key]:cutText(b[key],m)})]);if(tryPart(part))lo=m;else hi=m-1}
+    if(lo>=6)best=blocks([Object.assign({},b,{[key]:cutText(b[key],lo)})]);
+  }else if(b&&b.list){
+    let k=b.list.length;while(k>0&&!tryPart(blocks([{list:b.list.slice(0,k)}])))k--;
+    if(k>0)best=blocks([{list:b.list.slice(0,k)}]);
+  }
+  /* never end on a heading */
+  while(!best&&n>0&&list[n-1].h)n--;
+  el.innerHTML=html(n,best);
+  if(over(el)){el.innerHTML=html(Math.max(0,n-1),'')}
+  return true;
+}
+/* shrink-to-fit with a safety cut at the minimum size */
+function fitOrCut(el){
+  const [lo,hi]=el.dataset.fit.split(',').map(Number);
+  if(fit(el,lo,hi))return;
+  const kind=el.dataset.cut;if(!kind)return;
+  const list=kind==='month'?(M.word.blocks||[]).slice():(I.testimony.paragraphs||[]).map(p=>({p}));
+  el.style.fontSize=lo+'pt';
+  fillCut(el,list,P.fullTextNote||'Read it in full at dreamcentre-pep.github.io');
+}
+
+function layout(){
+  document.querySelectorAll('.p1 .svc .fitline').forEach(el=>fitHead(el,30,16,mm(40)));
+  document.querySelectorAll('.p3 .fitline').forEach(el=>fitHead(el,21,12,mm(20)));
+  document.querySelectorAll('.p2 .fitbox').forEach(el=>fitHead(el,26,13,mm(70)));
+  document.querySelectorAll('.fitq').forEach(el=>fitHead(el,8.6,6.6,mm(26)));
+  document.querySelectorAll('.fitq2').forEach(el=>fitHead(el,8.6,6.2,mm(22)));
+  document.querySelectorAll('.fitc').forEach(el=>fitHead(el,13,7.5,mm(24)));
+  const st=document.getElementById('study');
+  if(st&&I.study){
+    const note=(P.studyNote||'Continue in the GOBC&H 2026 main manual').replace('{year}',D(I.date).getFullYear());
+    fillCut(st,I.study.blocks||[],note);
+  }
+  document.querySelectorAll('[data-fit]').forEach(fitOrCut);
+}
+
+function build(data){
+  S=data.site;I=data.issue;M=data.month||null;P=Object.assign({mode:'home'},S.print||{});
+  const mode=(qs.get('mode')||P.mode)==='shop'?'shop':'home';
+  document.body.classList.toggle('mode-shop',mode==='shop');
+  document.getElementById('pageSize').textContent=mode==='shop'?'@page{size:216mm 303mm;margin:0}':'@page{size:210mm 297mm;margin:0}';
+  applyAccent(I.accent||'#fec91b');
+  document.title=`PEP Magazine ${longDate(I.date)} - Print`;
+  const host=document.getElementById('pages');
+  host.innerHTML=p1()+p2()+p3()+p4()+p5();
+  const imgs=[...document.images];
+  Promise.all([document.fonts.ready,...imgs.map(im=>im.complete?1:new Promise(r=>{im.onload=im.onerror=r}))])
+  .then(()=>new Promise(r=>setTimeout(r,150)))
+  .then(()=>{layout();window.PEP_PRINT_READY=true;document.body.dataset.ready='1';
+    if(qs.get('auto')==='1')setTimeout(()=>window.print(),500)});
+}
+
+document.getElementById('printBtn').addEventListener('click',()=>window.print());
+const fail=m=>{document.getElementById('pages').innerHTML=`<p class="status">${esc(m)}</p>`;window.PEP_PRINT_READY=true};
+const d=qs.get('preview'),t=qs.get('t');
+if(d&&t&&/^\d{4}-\d{2}-\d{2}$/.test(d)){
+  /* draft issue straight from Drive, before approval */
+  fetch('config.json',{cache:'no-store'}).then(r=>r.json()).then(cfg=>Promise.all([
+    fetch('data/site.json',{cache:'no-store'}).then(r=>r.json()),
+    fetch(cfg.feed+'?'+new URLSearchParams({p:'pdata',d,t}),{cache:'no-store'}).then(r=>r.json())]))
+  .then(([site,pd])=>{if(!pd.ok)throw 0;window.PEP_ASSETS=pd.assets||{};build({site,issue:pd.issue,month:pd.month})})
+  .catch(()=>fail('This print link could not be opened. Use the newest preview link from the email or the PEP Settings sheet.'));
+}else{
+  const q=qs.get('issue');
+  const url=q&&/^\d{4}-\d{2}-\d{2}$/.test(q)?`data/issues/${q}.json`:'data/current.json';
+  fetch(url,{cache:'no-store'}).then(r=>r.json()).then(data=>
+    fetch('data/site.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null).then(site=>{
+      if(site)data.site=Object.assign({},data.site,site);build(data)}))
+  .catch(()=>fail('This issue could not be loaded. Check your connection and refresh.'));
+}
+})();
+</script>
+</body>
+</html>

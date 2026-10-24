@@ -516,7 +516,7 @@ async function loadPreview(d,t,act){
   }
 }
 function renderPreviewBar(pb){
-  const P=I.preview,printUrl=`?preview=${P.d}&t=${P.t}&print=1`;
+  const P=I.preview,printUrl=`print.html?preview=${P.d}&t=${P.t}&auto=1`;
   const printLink=`<a class="pb-link" href="${printUrl}" target="_blank" rel="noopener">Print or save as PDF</a>`;
   if(P.status==='Draft'){
     pb.innerHTML=`${P.msg?esc(P.msg)+' ':'Preview only. Not public yet.'} <button class="pb-btn" id="pbApprove" type="button">Approve this issue</button>${P.swap.map(s=>` <button class="pb-link pb-swap" data-slot="${s}" type="button">New ${s} image</button>`).join('')} ${printLink}`;
@@ -550,6 +550,8 @@ function boot(data){
   window.addEventListener('hashchange',route);route();
 }
 
+/* the print edition has its own 5-page A4 page */
+{const q=new URLSearchParams(location.search);if(q.get('print')){q.delete('print');if(q.get('preview'))q.set('auto','1');location.replace('print.html?'+q.toString());return}}
 if(window.PEP_DATA)boot(window.PEP_DATA);
 else if(/^\d{4}-\d{2}-\d{2}$/.test(new URLSearchParams(location.search).get('preview')||'')&&new URLSearchParams(location.search).get('t')){
   const qs=new URLSearchParams(location.search);loadPreview(qs.get('preview'),qs.get('t'),qs.get('do'));
