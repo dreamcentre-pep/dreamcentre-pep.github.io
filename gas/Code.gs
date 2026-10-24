@@ -24,6 +24,7 @@ function cfg_() {
     mode: (c['image mode'] || 'Library + stock').toLowerCase(),
     pexels: c['pexels api key'] || '',
     pixabay: c['pixabay api key'] || '',
+    github: c['github key'] || '',
     publish: parseDayTime_(c['publish day and time'] || 'Saturday 18:00'),
     reminder: parseDayTime_(c['reminder day and time'] || 'Saturday 15:00'),
     website: (c['website'] || 'https://dreamcentre-pep.github.io').replace(/\/$/, ''),
@@ -158,13 +159,62 @@ function remindAndPublish_(c) {
     else if (st.status === 'Draft') mailDraft_(c, readJson_(DriveApp.getFolderById(st.folder), '_issue.json'), st, false, true);
     flags.reminded = true; setJ_('flags:' + sunday, flags);
   }
-  // mark published once release time passed
-  if (st && st.status === 'Approved' && now >= releaseAt_(sunday, st, c)) {
-      st.status = 'Published'; st.published = stamp_(); setJ_('st:' + sunday, st);
-      setStatus_(sunday, { status: 'Live', published: st.published });
-      mail_(c.notify, 'PEP Magazine for ' + prettyDate_(sunday) + ' is now live',
-        '<p>The issue is now live at <a href="' + c.website + '">' + c.website + '</a>. It can take up to 15 minutes to appear.</p>');
-  }
+  // release time passed: ask GitHub to update the website now
+  if (st && st.status === 'Approved' && now >= releaseAt_(sunday, st, c)) startPublish_(c, sunday, st);
+  checkLive_(c);
+}
+
+/* ---------------- publishing to the website ---------------- */
+var REPO = 'dreamcentre-pep/dreamcentre-pep.github.io';
+/** Start the website update (GitHub Action) straight away. Returns true if GitHub accepted. */
+function dispatch_(c) {
+  if (!c.github) return false;
+  try {
+    var r = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/publish.yml/dispatches', {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify({ ref: 'main' }), muteHttpExceptions: true,
+      headers: { Authorization: 'Bearer ' + c.github, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } });
+    if (r.getResponseCode() === 204) return true;
+    notifyError_('GitHub did not accept the website update (code ' + r.getResponseCode() + '). Check the GitHub key in PEP Settings', r.getContentText().slice(0, 300));
+  } catch (e) { notifyError_('Could not reach GitHub to update the website', e); }
+  return false;
+}
+function startPublish_(c, date, st) {
+  st.status = 'Published'; st.pending = true; st.dispatchedAt = Date.now(); st.pendingSince = Date.now(); setJ_('st:' + date, st);
+  setStatus_(date, { status: 'Publishing (website updating)' });
+  dispatch_(c);
+}
+/** Send the "now live" email only once the website really shows the issue. */
+function checkLive_(c) {
+  getJ_('approvedDates', []).forEach(function (date) {
+    var st = getJ_('st:' + date, null); if (!st || !st.pending) return;
+    var site = null;
+    try { site = JSON.parse(UrlFetchApp.fetch(c.website + '/data/state.json?x=' + Date.now(), { muteHttpExceptions: true }).getContentText()); } catch (e) { }
+    if (site && site.date === date && (!st.version || site.version === st.version)) {
+      st.pending = false; st.published = stamp_(); setJ_('st:' + date, st);
+      setStatus_(date, { status: 'Live', published: st.published });
+      mail_(c.notify, 'PEP Magazine for ' + prettyDate_(date) + ' is now live',
+        '<p>The issue is now live at <a href="' + c.website + '">' + c.website + '</a>.</p>');
+      return;
+    }
+    if (site && site.date > date) { st.pending = false; setJ_('st:' + date, st); return; }   // a newer issue already replaced it
+    if (Date.now() - (st.dispatchedAt || 0) > 20 * 60e3) { st.dispatchedAt = Date.now(); setJ_('st:' + date, st); dispatch_(c); }
+    if (!st.warnedSlow && Date.now() - (st.pendingSince || 0) > 60 * 60e3) {
+      st.warnedSlow = true; setJ_('st:' + date, st);
+      mail_(c.notify, 'PEP Magazine for ' + prettyDate_(date) + ' is taking long to go live',
+        '<p>The website has not updated an hour after release. It keeps trying every 20 minutes. If this continues, check the GitHub key in PEP Settings.</p>');
+    }
+  });
+}
+/** Run from the editor to refresh the website now with the current live issue. */
+function updateWebsiteNow() { var ok = dispatch_(cfg_()); Logger.log(ok ? 'GitHub accepted. The website updates in about 3 to 5 minutes.' : 'GitHub refused. Check the GitHub key in PEP Settings.'); }
+/** Run from the editor to check the GitHub key. It does not publish anything. */
+function testGithubKey() {
+  var c = cfg_();
+  if (!c.github) { Logger.log('No GitHub key in PEP Settings.'); return 'missing'; }
+  var r = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/publish.yml', { muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + c.github, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } });
+  var msg = r.getResponseCode() === 200 ? 'GitHub key works for ' + REPO : 'GitHub key problem: code ' + r.getResponseCode() + ' ' + r.getContentText().slice(0, 200);
+  Logger.log(msg); return msg;
 }
 function releaseAt_(sunday, st, c) {
   var pub = dueTime_(sunday, c.publish);
@@ -524,12 +574,13 @@ function approve_(c, date, st, folder) {
     var approvedList = getJ_('approvedDates', []); if (approvedList.indexOf(date) < 0) approvedList.push(date); setJ_('approvedDates', approvedList.sort());
     setStatus_(date, { status: 'Approved', approved: stamp_() });
     mail_(c.notify, 'PEP Magazine for ' + prettyDate_(date) + ' was approved', '<p>It will go live ' + whenLive_(date, st, c) + '.</p>');
+    if (new Date() >= releaseAt_(date, st, c) && date === upcomingSunday_()) startPublish_(c, date, st);
   }
   return page_('Approved', 'Thank you. The issue for <b>' + prettyDate_(date) + '</b> is approved and will go live ' + whenLive_(date, st, c) + '.');
 }
 function whenLive_(date, st, c) {
   var r = releaseAt_(date, st, c);
-  return new Date() >= r ? 'within the next 15 minutes' : 'on ' + Utilities.formatDate(r, TZ, "EEEE d MMMM 'at' h:mm a");
+  return new Date() >= r ? 'within the next 10 minutes' : 'on ' + Utilities.formatDate(r, TZ, "EEEE d MMMM 'at' h:mm a");
 }
 /** What the website should show right now. */
 function currentApproved_(c) {
