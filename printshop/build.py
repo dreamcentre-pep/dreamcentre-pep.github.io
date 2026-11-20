@@ -213,7 +213,7 @@ def to_cmyk(src, out):
         except Exception:
             pass
     q3 = src + '.q3.pdf'; doc.save(q3, garbage=3, deflate=True)
-    subprocess.run(['gs', '-q', '-dNOPAUSE', '-dBATCH', '-dSAFER', '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4',
+    subprocess.run(['gs', '-q', '-dNOPAUSE', '-dBATCH', '-dSAFER', '--permit-file-read=' + ICC, '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4',
                     '-sColorConversionStrategy=CMYK', '-sProcessColorModel=DeviceCMYK', '-sOutputICCProfile=' + ICC,
                     '-dOverrideICC=true', '-dRenderIntent=1', '-dBlackPtComp=1', '-dPDFSETTINGS=/prepress',
                     '-dAutoFilterColorImages=false', '-dColorImageFilter=/DCTEncode', '-dJPEGQ=95',
