@@ -23,14 +23,14 @@ def call(params=None, body=None):
 def main(date, code):
     import urllib.parse  # noqa
     # 1. private kit
-    first = call({'p': 'printkit', 'd': date, 'k': code, 'part': 0})
+    first = call({'p': 'printkit', 'd': date, 'c': code, 'part': 0})
     raw = base64.b64decode(first['b64'])
     for i in range(1, first['parts']):
-        raw += base64.b64decode(call({'p': 'printkit', 'd': date, 'k': code, 'part': i})['b64'])
+        raw += base64.b64decode(call({'p': 'printkit', 'd': date, 'c': code, 'part': i})['b64'])
     zipfile.ZipFile(io.BytesIO(raw)).extractall(HERE)
     os.environ['PEP_ICC'] = os.path.join(HERE, 'FOGRA39L_coated.icc')
     # 2. issue data (draft or approved), images as data URIs
-    pd = call({'p': 'printdata', 'd': date, 'k': code})
+    pd = call({'p': 'printdata', 'd': date, 'c': code})
     assets = pd.get('assets') or {}
     fix = lambda v: assets.get(v, v) if isinstance(v, str) else v
     I, M = pd['issue'], pd.get('month')
