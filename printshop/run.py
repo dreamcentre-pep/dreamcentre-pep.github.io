@@ -28,6 +28,8 @@ def main(date, code):
     for i in range(1, first['parts']):
         raw += base64.b64decode(call({'p': 'printkit', 'd': date, 'k': code, 'part': i})['b64'])
     zipfile.ZipFile(io.BytesIO(raw)).extractall(HERE)
+    import otf2ttf  # Trajan as TrueType: some Chromium versions misplace its CFF glyphs
+    otf2ttf.convert(os.path.join(HERE, 'fonts', 'TrajanPro-Bold.otf'), os.path.join(HERE, 'fonts', 'TrajanPro-Bold.ttf'))
     os.environ['PEP_ICC'] = os.path.join(HERE, 'FOGRA39L_coated.icc')
     # 2. issue data (draft or approved), images as data URIs
     pd = call({'p': 'printdata', 'd': date, 'k': code})
