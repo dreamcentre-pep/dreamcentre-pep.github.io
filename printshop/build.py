@@ -15,6 +15,8 @@ MM = 72 / 25.4
 def load_img(src, root):
     if src.startswith('data:'):
         return Image.open(io.BytesIO(base64.b64decode(src.split(',', 1)[1]))).convert('RGB')
+    if '/assets/' in src and src.startswith('http'):
+        src = 'assets/' + src.split('/assets/', 1)[1]
     return Image.open(os.path.join(root, src)).convert('RGB')
 
 
