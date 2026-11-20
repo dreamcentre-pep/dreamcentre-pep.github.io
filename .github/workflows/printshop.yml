@@ -30,7 +30,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q ghostscript qpdf
-          pip install pillow==10.4.0 pikepdf==9.4.2 pymupdf==1.24.14 playwright==1.47.0
+          pip install pillow==10.4.0 pikepdf==9.4.2 pymupdf==1.24.14 playwright==1.47.0 fonttools==4.54.1
           python -m playwright install --with-deps chromium
       - name: Build and send to Drive
         run: python printshop/run.py "${{ inputs.date }}" "${{ inputs.code }}"
