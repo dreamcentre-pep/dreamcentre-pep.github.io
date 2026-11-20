@@ -1,0 +1,7 @@
+template.pdf
+fonts/
+*.icc
+issue.json
+*.pdf
+*.work/
+__pycache__/

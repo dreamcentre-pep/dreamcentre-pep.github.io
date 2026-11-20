@@ -1,0 +1,288 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Monument;src:url(fonts/MonumentExtended-Regular.otf);font-weight:400}
+@font-face{font-family:Monument;src:url(fonts/MonumentExtended-Ultrabold.otf);font-weight:800}
+@font-face{font-family:Pala;src:url(fonts/pala.ttf);font-weight:400;font-style:normal}
+@font-face{font-family:Pala;src:url(fonts/palab.ttf);font-weight:700;font-style:normal}
+@font-face{font-family:Pala;src:url(fonts/palai.ttf);font-weight:400;font-style:italic}
+@font-face{font-family:Pala;src:url(fonts/palabi.ttf);font-weight:700;font-style:italic}
+@font-face{font-family:Trajan;src:url(fonts/TrajanPro-Bold.otf);font-weight:700}
+@font-face{font-family:Brico;src:url(fonts/BricolageGrotesque-Regular.ttf);font-weight:400}
+@font-face{font-family:Brico;src:url(fonts/BricolageGrotesque-Bold.ttf);font-weight:700}
+@page{size:210mm 297mm;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:transparent}
+.page{position:relative;width:595.276pt;height:841.89pt;overflow:hidden;break-after:page}
+.page:last-child{break-after:auto}
+.a{position:absolute;white-space:nowrap}
+.mon{font-family:Monument;font-weight:400}.monb{font-family:Monument;font-weight:800}
+.tra{font-family:Trajan;font-weight:700}
+.pal{font-family:Pala}
+.box{position:absolute;overflow:hidden;white-space:normal}
+.txt{font-family:Pala;color:#000;text-align:justify;hyphens:manual}
+.txt p{margin:0}
+.txt .gap{margin-top:1em}
+.txt h4{font-weight:700;margin:0}
+.txt .scr{font-style:italic}
+.txt .scr b{font-style:italic}
+.txt .note{font-style:italic;text-align:left}
+.txt .sig{text-align:left;white-space:pre-line}
+.c{text-align:center}
+.drop{float:left;font-family:Pala;font-weight:700;font-style:italic;line-height:.8;margin:.04em .06em 0 0}
+.pw{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;background:#fff;border:.5pt solid #ccc;
+  font-family:Monument;text-transform:uppercase;line-height:1.08;white-space:normal;padding:0 6pt}
+.img{position:absolute;object-fit:contain}
+</style></head><body><div id="root"></div>
+<script>
+const DATA=window.DATA;const S=DATA.site,I=DATA.issue,M=DATA.month||{};const ACC=DATA.accent;
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const D=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const words=s=>String(s).split(/\s+/).filter(Boolean);
+const root=document.getElementById('root');
+let PG;
+function page(){PG=document.createElement('section');PG.className='page';root.appendChild(PG);return PG}
+/* absolutely placed element; y given as BASELINE of first line unless top:true */
+function el(tag,cls,html,st){const e=document.createElement(tag);e.className=cls;e.innerHTML=html;Object.assign(e.style,st||{});PG.appendChild(e);return e}
+const pt=v=>v+'pt';
+/* single line text whose first baseline sits at y; anchor: left|center|right at x */
+function line(text,cls,size,x,y,opt){opt=opt||{};
+  const e=el('div','a '+cls,esc(text),{fontSize:pt(size),color:opt.color||'#000',letterSpacing:opt.ls||'normal',lineHeight:'1'});
+  e.dataset.x=x;e.dataset.y=y;e.dataset.anchor=opt.anchor||'left';if(opt.maxw)e.dataset.maxw=opt.maxw;if(opt.minsize)e.dataset.min=opt.minsize;
+  if(opt.fillw)e.dataset.fillw=opt.fillw;if(opt.group)e.dataset.group=opt.group;
+  if(opt.grad)e.dataset.grad=opt.grad;
+  return e}
+function baselineOf(e){const p=document.createElement('span');p.style.cssText='display:inline-block;width:0;height:0;vertical-align:baseline';
+  const first=e.firstChild;e.insertBefore(p,first);const r=p.getBoundingClientRect().top-e.getBoundingClientRect().top;p.remove();return r}
+const PX=96/72;
+function placeLines(){
+  document.querySelectorAll('.a').forEach(e=>{
+    let size=parseFloat(e.style.fontSize);
+    if(e.dataset.fillw){ /* scale to fill width exactly */
+      const w=+e.dataset.fillw;for(let i=0;i<3;i++){size=size*w*PX/e.getBoundingClientRect().width;e.style.fontSize=pt(size)}
+      if(e.dataset.maxsize&&size>+e.dataset.maxsize)e.style.fontSize=pt(+e.dataset.maxsize);
+    }
+    if(e.dataset.maxw){const mw=+e.dataset.maxw*PX,mn=+(e.dataset.min||4);
+      while(e.getBoundingClientRect().width>mw&&size>mn){size-=.25;e.style.fontSize=pt(size)}}
+  });
+  const groups={};document.querySelectorAll('.a[data-group]').forEach(e=>{const g=e.dataset.group,s=parseFloat(e.style.fontSize);groups[g]=Math.min(groups[g]||99,s)});
+  document.querySelectorAll('.a[data-group]').forEach(e=>e.style.fontSize=pt(groups[e.dataset.group]));
+  document.querySelectorAll('.a').forEach(e=>{
+    const w=e.getBoundingClientRect().width/PX,x=+e.dataset.x,a=e.dataset.anchor;
+    e.style.left=pt(a==='center'?x-w/2:a==='right'?x-w:x);
+    e.style.top='0';const b=baselineOf(e)/PX;e.style.top=pt(+e.dataset.y-b);
+    if(e.dataset.grad){const r=e.getBoundingClientRect(),cs=getComputedStyle(e),st=e.dataset.grad.split(',');
+      const id='g'+Math.random().toString(36).slice(2);
+      e.innerHTML=`<svg width="${r.width}" height="${r.height}" style="display:block;overflow:visible"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${st[0]}" stop-opacity="1"/><stop offset="0.45" stop-color="${st[0]}" stop-opacity="1"/><stop offset="1" stop-color="${st[0]}" stop-opacity="0.08"/></linearGradient></defs><text x="0" y="${b*PX}" fill="url(#${id})" style="font-family:${cs.fontFamily};font-weight:${cs.fontWeight};font-size:${cs.fontSize};letter-spacing:${cs.letterSpacing}">${esc(e.textContent)}</text></svg>`;}
+  });
+}
+/* text box (multi-line) with first baseline at y */
+function box(cls,html,x,y,w,h,size,lh,st){
+  const e=el('div','box '+cls,html,Object.assign({left:pt(x),width:pt(w),fontSize:pt(size),lineHeight:pt(lh)},st||{}));
+  e.dataset.y=y;e.dataset.h=h;e.dataset.lh=lh;return e}
+function setBoxTop(e){ /* top so that first baseline lands on data-y; height so box bottom = y+h */
+  const lh=parseFloat(e.style.lineHeight)/PX||parseFloat(e.dataset.lh),size=parseFloat(e.style.fontSize);
+  e.style.top='0';e.style.height=pt(+e.dataset.h+lh);
+  const t=e.querySelector('p,h4,div,span')||e;const b=(baselineOf(t)+t.getBoundingClientRect().top-e.getBoundingClientRect().top)/PX;
+  e.style.top=pt(+e.dataset.y-b);e.style.height=pt(+e.dataset.h+b);
+}
+const over=e=>e.scrollHeight>e.clientHeight+1;
+/* ---- flow blocks through several boxes ---- */
+function flow(boxes,blocks,note){
+  boxes.forEach(b=>b.innerHTML='');let i=0,carry=null;
+  for(let k=0;k<boxes.length;k++){const bx=boxes[k];
+    while(true){
+      let blk=carry||blocks[i];if(!blk)break;
+      const node=mk(blk);bx.appendChild(node);
+      if(!over(bx)){carry=null;i++;continue}
+      /* split by words */
+      bx.removeChild(node);
+      if(!blk.text||blk.atomic){break}
+      const w=words(blk.text);let lo=0,hi=w.length-1;
+      while(lo<hi){const m=Math.ceil((lo+hi)/2);const n=mk(Object.assign({},blk,{text:w.slice(0,m).join(' '),cut:true}));bx.appendChild(n);const ok=!over(bx);bx.removeChild(n);if(ok)lo=m;else hi=m-1}
+      if(lo>0){bx.appendChild(mk(Object.assign({},blk,{text:w.slice(0,lo).join(' '),cut:true})));carry=Object.assign({},blk,{text:w.slice(lo).join(' '),cont:true,drop:false})}
+      else carry=blk;
+      break;
+    }
+  }
+  return carry||blocks[i]?{i,carry}:null;
+}
+function mk(b){const e=document.createElement(b.tag||'p');if(b.cls)e.className=b.cls;
+  if(b.gap&&!b.cont)e.classList.add('gap');
+  let h='';if(b.drop&&!b.cont){const t=b.text;h=`<span class="drop" style="font-size:${b.drop}pt">${esc(t[0])}</span>${esc(t.slice(1))}`}
+  else h=(b.pre||'')+esc(b.text||'')+(b.post||'');
+  if(b.cut)e.style.textAlignLast='justify';
+  e.innerHTML=h;return e}
+/* fit: largest size in [lo,hi] where flow leaves nothing; then optionally stretch line spacing */
+function fitFlow(boxes,blocks,lo,hi,lhRatio,stretchMax){
+  const set=s=>boxes.forEach(b=>{b.style.fontSize=pt(s);b.style.lineHeight=pt(s*lhRatio);});
+  set(hi);if(!flow(boxes,blocks)){if(stretchMax)stretch(boxes,blocks,hi,lhRatio,stretchMax);return hi}
+  let a=lo,b=hi;for(let k=0;k<12;k++){const m=(a+b)/2;set(m);if(flow(boxes,blocks))b=m;else a=m}
+  set(a);const left=flow(boxes,blocks);if(!left&&stretchMax)stretch(boxes,blocks,a,lhRatio,stretchMax);return left?null:a}
+function stretch(boxes,blocks,s,r0,r1){let a=r0,b=r1;const set=r=>boxes.forEach(x=>x.style.lineHeight=pt(s*r));
+  set(r1);if(!flow(boxes,blocks))return;for(let k=0;k<10;k++){const m=(a+b)/2;set(m);if(flow(boxes,blocks))b=m;else a=m}set(a);flow(boxes,blocks)}
+/* fixed size flow; if it does not fit, end the last box with the note */
+function flowCut(boxes,blocks,note){
+  let left=flow(boxes,blocks);if(!left)return;
+  const last=boxes[boxes.length-1];const nb={text:note,cls:'note',atomic:true};
+  /* remove content from the end of the last box until the note fits */
+  while(true){const n=mk(nb);last.appendChild(n);if(!over(last))return;last.removeChild(n);
+    const lc=last.lastElementChild;if(!lc)return;
+    const t=lc.textContent;const w=words(t);
+    if(w.length<=4||lc.tagName==='H4'){lc.remove();continue}
+    /* trim to previous sentence end if possible, else drop 3 words */
+    let cut=w.slice(0,-3).join(' ');const m=cut.match(/^(.*[.!?”"])\s/);if(m&&m[1].length>cut.length*0.6)cut=m[1];else cut=cut.replace(/[,;:\-–]+$/,'')+'...';
+    lc.textContent=cut;lc.style.textAlignLast='left';
+  }
+}
+/* ---------------- PAGE 1 ---------------- */
+function p1(){page();
+  /* service title */
+  const t=words(I.service&&I.service.title||'Sunday Service');
+  const l3=t.length>1?t[t.length-1]:t[0],l2=t.length>1?t[t.length-2]:'',l1=t.slice(0,Math.max(0,t.length-2)).join(' ');
+  const cx=315.5;const tc=s=>s?s[0].toUpperCase()+s.slice(1).toLowerCase():s;
+  if(l1)line(l1.toUpperCase(),'tra',26.5,cx,116.6,{color:DATA.titleColor||'#000',anchor:'center',ls:'.42em',maxw:290,minsize:14});
+  if(l2)line(tc(l2),'tra',41.1,cx,(l1?150.9:150.9),{color:DATA.titleColor||'#000',anchor:'center',maxw:300,minsize:20});
+  line(tc(l3),'tra',45.2,cx,188.6,{anchor:'center',maxw:300,minsize:20,grad:(DATA.titleColor||'#000')});
+  /* honour panel */
+  const h=M.honour||{};const cxp=86.5;
+  const d=D(I.date);line(MONTHS[d.getMonth()].toUpperCase(),'mon',10.4,cxp,103.6,{anchor:'center',color:'#fed700'});
+  let ht=String(h.title||'').replace(/^\s*our month of( the)?\s*/i,'').trim();
+  line('Our month of THE','mon',8,cxp,116.0,{anchor:'center',color:'#fff'});
+  const hw=words(ht.toUpperCase());const half=Math.ceil(hw.length/2);
+  const hl1=hw.length>1?hw.slice(0,hw.length===2?1:half).join(' '):hw.join(' '),hl2=hw.length>1?hw.slice(hw.length===2?1:half).join(' '):'';
+  line(hl1,'monb',14,cxp,hl2?129.3:136.9,{anchor:'center',color:'#fff',maxw:125,minsize:8,group:'ht'});
+  if(hl2)line(hl2,'monb',14,cxp,144.6,{anchor:'center',color:'#fff',maxw:125,minsize:8,group:'ht'});
+  /* series: "5 Blessed Sundays of Divine Allocations" */
+  const sr=String(h.series||'').trim();const m=sr.match(/^(\d+)\s+(.*?)\s+of\s+(.*)$/i)||[null,String((h.sundays||[]).length||''),sr,''];
+  line(m[1],'mon',81.3,9.5,215.4,{color:'#fff'});
+  const a=words(m[2].toUpperCase()),b=words(m[3].toUpperCase());
+  const right=145;const two=(arr)=>arr.length>1?[arr.slice(0,-1).join(' '),arr[arr.length-1]]:[arr[0]||''];
+  const [a1,a2]=two(a);const [bb1,bb2]=two(b);
+  if(a1)fillW(line(a1,'mon',8.7,right,176.5,{anchor:'right',color:'#fff'}),69.1,14);
+  if(a2)fillW(line(a2,'mon',10.9,right,188.6,{anchor:'right',color:'#fff'}),69.1,14);
+  if(m[3])line('OF','mon',8.8,61.3,203.7,{color:'#000'});
+  if(bb1)fillW(line(bb1,'mon',16.3,right,205.5,{anchor:'right',color:'#fff'}),68.7,17);
+  if(bb2)fillW(line(bb2,'mon',13.1,right,217.2,{anchor:'right',color:'#fff'}),74.8,14);
+  /* dates with the current one highlighted */
+  const sun=(h.sundays||[]).map(D);const cur=sun.findIndex(x=>+x===+d);
+  const n=sun.length;const top=226,bottom=314;const hlH=26.2;const other=(bottom-top-hlH)/Math.max(1,n-1);
+  let y=top;
+  sun.forEach((x,i)=>{const lab=MON[x.getMonth()].toUpperCase()+' '+x.getDate();
+    if(i===cur){el('div','',' ',{position:'absolute',left:'14.6pt',top:pt(y),width:pt(142.9),height:pt(hlH),background:ACC});
+      line(lab,'mon',19.2,cxp,y+19.6,{anchor:'center',color:onAcc(ACC)});y+=hlH}
+    else{const s=Math.max(9,Math.min(14,other*.82));line(lab,'mon',s,cxp,y+other*.5+s*.36,{anchor:'center',color:'#fff'});y+=other}
+  });
+  /* Father's Heart */
+  const fh=I.fathersHeart||{};
+  const sub=words(String(fh.title||'').toUpperCase());
+  if(sub.length){const t1=[],t2=[];let w=0;const tot=sub.join(' ').length;sub.forEach(x=>{(w<tot*0.55?t1:t2).push(x);w+=x.length+1});
+    line(t1.join(' '),'mon',10,207.9,373.1,{anchor:'center',maxw:320,minsize:7,group:'fh'});if(t2.length)line(t2.join(' '),'mon',10,207.9,385.1,{anchor:'center',maxw:320,minsize:7,group:'fh'})}
+  const bl=[];if(fh.salutation)bl.push({text:fh.salutation});(fh.paragraphs||[]).forEach(p=>bl.push({text:p}));
+  if(fh.closing)bl.push({text:fh.closing,gap:true});if(fh.signature)bl.push({text:fh.signature,cls:'sig',atomic:false});
+  const b1=box('txt','',21.1,398.2,195.8,812.8-398.2,8.2,10.9),b2=box('txt','',227.4,398.2,210.7,698-398.2,8.2,10.9);
+  FLOWS.push(()=>{[b1,b2].forEach(setBoxTop);fitFlow([b1,b2],bl,6.6,11,1.33,1.6);[b1,b2].forEach(setBoxTop);flow([b1,b2],bl)});
+  /* quote with diagonal left edge */
+  if(fh.quote){const q=box('monb','',287,720.6,151,86,10,11.8,{color:'#000',textAlign:'justify',textAlignLast:'left'});
+    q.innerHTML=`<div style="float:left;width:30pt;height:100%;shape-outside:polygon(0 0,0% 0,100% 100%,0 100%)"></div>${esc(fh.quote)}`;
+    FLOWS.push(()=>{setBoxTop(q);let s=10;while(over(q)&&s>5.5){s-=.25;q.style.fontSize=pt(s);q.style.lineHeight=pt(s*1.18)}});}
+  /* message & book */
+  const mw=I.messageForWeek,bk=I.bookForWeek;
+  if(mw){if(mw.image)img(mw.image,445,402,145,70);
+    if(mw.title){const w=words(mw.title.toUpperCase());const mid=Math.ceil(w.length/2);
+      line(w.slice(0,mid).join(' '),'mon',16,522.9,w.length>1?485.2:490,{anchor:'center',maxw:122,minsize:7,group:'mw'});
+      if(w.length>1)line(w.slice(mid).join(' '),'mon',16,522.9,499,{anchor:'center',maxw:122,minsize:7,group:'mw'})}}
+  if(bk){if(bk.image)img(bk.image,470,541,87,86);
+    const t=box('mon c','',457,640.6,115,40,8,16,{color:'#000',textTransform:'uppercase',textAlign:'center'});t.innerHTML=esc(bk.title);
+    FLOWS.push(()=>{setBoxTop(t);let s=8;while(over(t)&&s>5){s-=.25;t.style.fontSize=pt(s);t.style.lineHeight=pt(s*2)}})}
+}
+function fillW(e,w,max){e.dataset.fillw=w;e.dataset.maxsize=max;return e}
+function img(src,x,y,w,h){const i=el('img','img','',{left:pt(x),top:pt(y),width:pt(w),height:pt(h)});i.src=src;return i}
+function onAcc(hex){const h=hex.replace('#','');const L=[0,2,4].map(i=>{let c=parseInt(h.slice(i,i+2),16)/255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)}).reduce((a,c,i)=>a+c*[.2126,.7152,.0722][i],0);return L>.35?'#000':'#fff'}
+/* ---------------- PAGE 2: God's Word ---------------- */
+function p2(){const w=M.word;page();const d=D(I.date);const mn=MONTHS[d.getMonth()].toUpperCase();
+  /* header: GOD'S WORD (bold) FOR (regular) MONTH YEAR (bold) */
+  const hd=el('div','a','<span class="monb">GOD’S WORD</span><span class="mon"> FOR </span><span class="monb">'+mn+' '+d.getFullYear()+'</span>',{fontSize:'18.5pt',lineHeight:'1',color:'#000'});
+  hd.dataset.x=291.3;hd.dataset.y=76.7;hd.dataset.anchor='center';hd.dataset.maxw=470;hd.dataset.min=10;
+  line('THE MONTH OF','mon',16.9,542.7,125.8,{anchor:'right',color:'#fff'});
+  const tt=String(w.title||'').replace(/^\s*the month of\s+(of\s+)?(the\s+)?/i,'').toUpperCase();
+  const tw=words(tt);const lines=[];let cur='';
+  tw.forEach(x=>{if(cur&&(cur+' '+x).length>9){lines.push(cur);cur=x}else cur=cur?cur+' '+x:x});if(cur)lines.push(cur);
+  const L=lines.slice(0,5);const pitch=43.2;let size=36;if(L.length>4)size=30;
+  L.forEach((s,i)=>line(s,'mon',size,543.8,157.9+i*pitch*(size/36),{anchor:'right',color:'#fff',maxw:300,minsize:14}));
+  if(w.subtitle)line(w.subtitle.toUpperCase(),'mon',10,291.7,143.3,{color:'#fff',maxw:250,minsize:6});
+  const bl=[];let first=true;
+  (w.blocks||[]).forEach(b=>{const t=b.lead||b.p||b.callout||b.scripture||b.h||(b.list||[]).join('; ');if(!t)return;
+    bl.push({text:t,gap:!first,drop:first?44.9:0,tag:b.h?'h4':'p',cls:b.scripture?'scr':''});first=false});
+  if(w.signature)bl.push({text:w.signature,cls:'sig',gap:true});
+  const c1=box('txt','',41.2,562.6,159,815.2-562.6,8.3,11.2),c2=box('txt','',220.1,392.9,163,798-392.9,8.3,11.2),c3=box('txt','',395.6,392.9,159,798-392.9,8.3,11.2);
+  FLOWS.push(()=>{[c1,c2,c3].forEach(setBoxTop);const r=fitFlow([c1,c2,c3],bl,6.8,9.5,1.35,1.5);
+    if(r===null){[c1,c2,c3].forEach(b=>{b.style.fontSize='6.8pt';b.style.lineHeight=pt(6.8*1.35)});[c1,c2,c3].forEach(setBoxTop);flowCut([c1,c2,c3],bl,DATA.fullTextNote||'Read it in full at dreamcentre-pep.github.io')}else{[c1,c2,c3].forEach(setBoxTop);flow([c1,c2,c3],bl)}});
+}
+/* ---------------- PAGE 3 ---------------- */
+function p3(){page();const hy=I.hymn||{},s=I.study||{},g=I.greaterWorks||{},c=I.covenant||{};
+  if(hy.title)line('Hymn: '+hy.title,'tra',21,320,56.4,{anchor:'center',maxw:440,minsize:12});
+  if(hy.reference)line(hy.reference,'pal',16,316.9,74.6,{anchor:'center',maxw:440,minsize:9});
+  const tw=words(String(s.title||'').toUpperCase());const t2=tw.length>=3?tw.slice(-2).join(' '):tw.join(' '),t1=tw.length>=3?tw.slice(0,-2).join(' '):'';
+  if(t1)line(t1,'tra',24,79.3,166.8,{color:'#fff',maxw:480,minsize:12});
+  line(t2,'tra',36,79.3,200.5,{color:'#fff',maxw:480,minsize:16});
+  if(s.number)line(String(s.number),'monb',17.2,48.1,197.3,{anchor:'center',color:'#000',maxw:26,minsize:9});
+  /* study body */
+  const blocks=(s.blocks||[]).slice();let ci=blocks.findIndex(b=>b.callout);let call=ci>=0?blocks.splice(ci,1)[0].callout:'';
+  const bl=[];blocks.forEach((b,i)=>{
+    if(b.h)bl.push({text:b.h,tag:'h4',gap:i>0});
+    else if(b.scripture)bl.push({text:b.scripture,cls:'scr'});
+    else if(b.list)b.list.forEach(x=>bl.push({text:x}));
+    else if(b.p||b.lead)bl.push({text:b.p||b.lead});});
+  const sb=[box('txt','',28.6,232.6,170,637-232.6,7.9,11.5),box('txt','',213.7,232.6,170.1,649-232.6,7.9,11.5),box('txt','',398.9,232.6,170,500-232.6,7.9,11.5)];
+  const note=(DATA.studyNote||'Continue in the GOBC&H {year} main manual').replace('{year}',D(I.date).getFullYear());
+  FLOWS.push(()=>{sb.forEach(setBoxTop);flowCut(sb,bl,note)});
+  if(!call&&s.title)call='';
+  if(call){const cb=box('monb c','',418,532,120,64,11,12.8,{color:'#000',textAlign:'center'});cb.innerHTML=esc(call);
+    FLOWS.push(()=>{setBoxTop(cb);let z=11;while(over(cb)&&z>5){z-=.25;cb.style.fontSize=pt(z);cb.style.lineHeight=pt(z*1.17)}})}
+  /* greater works */
+  if(g.reference)line(g.reference,'monb',12,390.1,763.6,{anchor:'right',color:'#fff',maxw:260,minsize:7});
+  if(g.text){const gb=box('mon','',115,779.9,283.4,40,12,14.4,{color:'#ffc742',textAlign:'justify',textAlignLast:'left'});gb.innerHTML=esc(g.text);
+    FLOWS.push(()=>{setBoxTop(gb);let z=12;while(over(gb)&&z>5){z-=.25;gb.style.fontSize=pt(z);gb.style.lineHeight=pt(z*1.2)}})}
+  /* covenant */
+  if(c.title){const cv=box('monb','',438,724,120,72,24,25,{color:'#fff',textTransform:'uppercase',textAlign:'left'});cv.innerHTML=esc(c.title);
+    FLOWS.push(()=>{setBoxTop(cv);let z=24;while((over(cv)||cv.scrollWidth>cv.clientWidth+1)&&z>5){z-=.25;cv.style.fontSize=pt(z);cv.style.lineHeight=pt(z*1.05)}})}
+}
+/* ---------------- PAGE 4 ---------------- */
+function p4(){page();const by=I.bibleInYear||[];const v=I.vocabulary||{},pw=I.propheticWords||[],t=I.testimony||{};
+  const slots=[178.4,270.3,361.9,453.4,545.0,636.3,728.1];
+  by.slice(0,7).forEach((e,i)=>{const d=D(e.date),y=slots[i];
+    line(MON[d.getMonth()],'mon',10,51.6,y+17.2,{color:'#000'});
+    line(String(d.getDate()),'mon',21.2,89.1,y+19.4,{color:i===0?'#ff0000':'#000'});
+    (e.readings||[]).slice(0,5).forEach((r,k)=>line(r,'pal',10,52.1,y+30.4+k*11.05,{color:'#000',maxw:84,minsize:6}))});
+  /* vocabulary verse */
+  if(v.reference||v.verse){const vb=box('pal','',190.3,84.6,374,16,9,10.5,{fontWeight:700,color:'#fff',textAlign:'left'});
+    vb.innerHTML=`<span style="color:#fed700">${esc(v.reference)}</span> “${esc(String(v.verse||'').replace(/^["“]|["”]$/g,''))}”`;
+    FLOWS.push(()=>{setBoxTop(vb);let z=9;while(over(vb)&&z>5.5){z-=.25;vb.style.fontSize=pt(z);vb.style.lineHeight=pt(z*1.15)}})}
+  const items=v.items||[];const ib=box('pal','',197.2,106.3,367,248-106.3,8,9.3,{color:'#000'});
+  ib.innerHTML=items.map(x=>`<div style="display:flex"><span style="width:18pt;flex:none">•</span><span>${esc(x)}</span></div>`).join('');
+  FLOWS.push(()=>{setBoxTop(ib);let z=8;while(over(ib)&&z>5){z-=.2;ib.style.fontSize=pt(z);ib.style.lineHeight=pt(z*1.16)}});
+  /* prophetic words grid */
+  const n=pw.length;if(n){const rows=Math.ceil(n/2),X=[188.8,384.1],W=182.4,top=320.4,H=115.3;const gap=rows>3?5:12.3;const bh=(H-gap*(rows-1))/rows;
+    pw.forEach((x,i)=>{const r=Math.floor(i/2),cc=i%2;let left=X[cc];if(n%2&&i===n-1)left=(X[0]+X[1])/2;
+      const b=el('div','pw',esc(x),{left:pt(left),top:pt(top+r*(bh+gap)),width:pt(W),height:pt(bh),fontSize:pt(Math.min(10,bh*.36))});
+      FLOWS.push(()=>{let z=parseFloat(b.style.fontSize);while((b.scrollHeight>b.clientHeight+1||b.scrollWidth>b.clientWidth+1)&&z>5){z-=.25;b.style.fontSize=pt(z)}})})}
+  /* testimony */
+  const bl=[];if(t.opening)bl.push({text:t.opening});(t.paragraphs||[]).forEach((p,i)=>bl.push({text:p,gap:i===0&&!!t.opening}));
+  const sig=[t.author,t.zone].filter(Boolean).join('\n');if(sig)bl.push({text:sig,cls:'sig',gap:true});
+  const tb=box('txt','',181.8,516.6,391.8,797.3-516.6,10,12.1);
+  FLOWS.push(()=>{setBoxTop(tb);const r=fitFlow([tb],bl,6.5,10,1.21,0);if(r===null){tb.style.fontSize='6.5pt';tb.style.lineHeight=pt(6.5*1.21);setBoxTop(tb);flowCut([tb],bl,DATA.fullTextNote||'Read it in full at dreamcentre-pep.github.io')}else{setBoxTop(tb);flow([tb],bl)}});
+}
+/* ---------------- PAGE 5 ---------------- */
+function p5(){page();const pr=(I.programmes||[])[0];
+  if(pr){const pb=box('','',366,127.9,180,52,14.9,13.9,{textAlign:'center'});
+    pb.innerHTML=`<div style="font-family:Brico;font-weight:700;color:#ffc742;text-transform:uppercase">${esc(pr.title)}</div>`+(pr.dates?`<div style="font-family:Brico;font-weight:400;color:#fff;font-size:.98em;margin-top:3pt">${esc(pr.dates)}</div>`:'');
+    FLOWS.push(()=>{setBoxTop(pb);let z=14.9;while(over(pb)&&z>6){z-=.25;pb.style.fontSize=pt(z);pb.style.lineHeight=pt(z*.93)}})}
+}
+const FLOWS=[];
+p1();if(DATA.includeMonth)p2();p3();p4();p5();
+document.fonts.ready.then(()=>Promise.all([...document.images].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r}))))
+.then(()=>{placeLines();FLOWS.forEach(f=>f());window.READY=true});
+</script></body></html>
