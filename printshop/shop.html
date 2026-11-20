@@ -180,7 +180,7 @@ function p1(){page();
   const sub=words(String(fh.title||'').toUpperCase());
   if(sub.length){const t1=[],t2=[];let w=0;const tot=sub.join(' ').length;sub.forEach(x=>{(w<tot*0.55?t1:t2).push(x);w+=x.length+1});
     line(t1.join(' '),'mon',10,207.9,373.1,{anchor:'center',maxw:320,minsize:7,group:'fh'});if(t2.length)line(t2.join(' '),'mon',10,207.9,385.1,{anchor:'center',maxw:320,minsize:7,group:'fh'})}
-  const bl=[];if(fh.salutation)bl.push({text:fh.salutation});(fh.paragraphs||[]).forEach(p=>bl.push({text:p}));
+  const bl=[];if(fh.salutation)bl.push({text:fh.salutation});const nrm=s=>String(s||'').toLowerCase().replace(/[\u2018\u2019']/g,"'").replace(/[\s.,!]+$/,'').trim();const skip=[fh.closing].concat(String(fh.signature||'').split('\n')).map(nrm).filter(Boolean);(fh.paragraphs||[]).filter(p=>skip.indexOf(nrm(p))<0).forEach(p=>bl.push({text:p}));
   if(fh.closing)bl.push({text:fh.closing,gap:true});if(fh.signature)bl.push({text:fh.signature,cls:'sig',atomic:false});
   const b1=box('txt','',21.1,398.2,195.8,812.8-398.2,8.2,10.9),b2=box('txt','',227.4,398.2,210.7,698-398.2,8.2,10.9);
   FLOWS.push(()=>{[b1,b2].forEach(setBoxTop);fitFlow([b1,b2],bl,6.6,11,1.33,1.6);[b1,b2].forEach(setBoxTop);flow([b1,b2],bl)});
